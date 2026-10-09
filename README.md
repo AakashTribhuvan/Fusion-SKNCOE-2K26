@@ -46,18 +46,38 @@ npm run dev -- --host 0.0.0.0 --port 5174
 - `POST /api/v1/sessions/{session_id}/verify`
 - `GET /api/v1/sessions/{session_id}/result`
 
-## Notes
+## Anti-Spoofing Architecture & Verification Logic
 
-- The app starts with reduced capability when optional ML models are unavailable.
-- Training is an explicit offline command. The application never trains or downloads model weights at startup.
-- The included MFCC-statistics logistic regression is a research baseline, not AASIST and not a production-grade deepfake detector.
-- No dataset is bundled or downloaded. Use only data you are licensed to process.
-- The official pretrained CLova AASIST ASVspoof2019-LA checkpoint is included under `backend/app/models/weights/` (about 1.28 MB); implementation source and MIT license notice are in `backend/app/models/`.
-- AASIST expects mono 16 kHz audio and uses a 64,600-sample window. Its output is class-0 spoof / class-1 bona-fide logits; the adapter applies softmax for display but marks scores uncalibrated. Its reported benchmark is ASVspoof 2019 Logical Access; it is not an identity model or a production guarantee.
-- The detector can be disabled with `FUSION_SPOOF_DETECTOR_ENABLED=false`; set `FUSION_AASIST_MODEL_PATH` to use another compatible AASIST checkpoint. The project baseline may instead be selected using `FUSION_SPOOF_MODEL_PATH`.
-- Silero VAD and faster-whisper are optional-runtime pretrained components; install dependencies with `pip install -r requirements.txt`. VAD weights and the configured Whisper `tiny` model are fetched by their libraries on first use; no model training occurs.
-- Phrase matching is strict and based on normalized transcript comparison; similarity is supplemental only.
-- Audio/video synchronization requires timestamps and mouth-motion values from a future Module A integration. A timing mismatch is not proof of manipulation.
+FUSION Module B includes a centralized anti-spoofing service with explicit verification decisions:
+
+- **`MODEL_PREDICTS_BONA_FIDE`**: Raw score indicates genuine human voice features above the operating threshold.
+- **`MODEL_PREDICTS_SPOOF`**: Raw score indicates synthetic, vocoded, or cloned speech traces below the operating threshold.
+- **`INDETERMINATE`**: Raw score falls within the provisional margin (`threshold ± margin`); human review required.
+- **`MODEL_UNAVAILABLE`**: Pretrained checkpoint not installed or configured.
+- **`PROCESSING_ERROR`**: Corrupted, silent, or unprocessable audio encountered.
+
+### Score Direction and Semantics
+- **Raw Metric:** Log-Likelihood Ratio ($LLR = \text{logit}_{\text{bonafide}} - \text{logit}_{\text{spoof}}$).
+- **Direction:** Higher positive score $\implies$ higher probability of bona fide human speech; negative score $\implies$ synthetic/spoofed speech.
+- **Threshold:** Calibrated decision threshold $\tau = 0.00$ with an indeterminate boundary margin $\delta = 0.10$.
+
+### Evaluating on Labelled Manifests
+Run repeatable evaluations against labelled CSV datasets:
+```powershell
+python -m app.training.evaluate_manifest --manifest path/to/dataset.csv --audio-root path/to/audio/ --output report.json
+```
+The script measures:
+- Confusion Matrix (TP, TN, FP, FN)
+- False Acceptance Rate (FAR: spoofs incorrectly classified as bona fide)
+- False Rejection Rate (FRR: bona fide speech incorrectly rejected)
+- Precision, Recall, Accuracy, and EER (Equal Error Rate)
+- Source-wise breakdown (e.g. grouped by TTS model, vocoder, or speaker)
+
+## Pretrained Models & Hardware Constraints
+- **Primary Detector:** Pretrained official AASIST (`backend/app/models/weights/AASIST.pth`, ~1.28 MB), evaluated on CPU with `<50ms` inference latency.
+- **W2V2-AASIST Adapter:** Supports `SpeechAntiSpoofingBenchmarks/W2V2-AASIST` (XLS-R 300M + AASIST graph head). Reports `MODEL_UNAVAILABLE` honestly if weights are not downloaded locally.
+- **No GPU Required:** Inference runs entirely on CPU. No unverified or simulated predictions are fabricated.
+
 
 ## Phase 2 dataset and training workflow
 

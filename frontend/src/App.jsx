@@ -13,7 +13,18 @@ import { createSession, refreshChallenge, uploadAudio, verifySession, getHealth 
 const initialStatus = 'Ready to record';
 const TARGET_SAMPLE_RATE = 16000;
 const MAX_RECORDING_SECONDS = 10;
-const SUPPORTED_AUDIO_TYPES = new Set(['audio/wav', 'audio/webm', 'audio/ogg', 'audio/mp4']);
+const SUPPORTED_AUDIO_TYPES = new Set([
+  'audio/wav',
+  'audio/x-wav',
+  'audio/webm',
+  'audio/ogg',
+  'audio/mp4',
+  'audio/mpeg',
+  'audio/mp3',
+  'audio/aac',
+  'audio/flac',
+  'audio/x-m4a',
+]);
 
 function getSupportedMimeType() {
   const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'];
@@ -90,6 +101,7 @@ export default function App() {
   const [duration, setDuration] = useState(0);
   const [audioUrl, setAudioUrl] = useState('');
   const [audioFile, setAudioFile] = useState(null);
+  const [audioFileName, setAudioFileName] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
@@ -122,6 +134,7 @@ export default function App() {
     setDuration(0);
     setAudioUrl('');
     setAudioFile(null);
+    setAudioFileName('');
     recordedChunksRef.current = [];
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
@@ -254,6 +267,7 @@ export default function App() {
         const wavBlob = createWavBlob(mono, decoded.sampleRate);
         const file = new File([wavBlob], 'recording.wav', { type: 'audio/wav' });
         setAudioFile(file);
+        setAudioFileName('Microphone Recording (recording.wav)');
         setAudioUrl(URL.createObjectURL(wavBlob));
         setStatus(`Recording ready (${(wavBlob.size / 1024).toFixed(1)} KB, ${decoded.duration.toFixed(1)}s). Play it back before submitting.`);
         stopStream();
@@ -262,6 +276,7 @@ export default function App() {
       mediaRecorderRef.current = recorder;
       recorder.start();
       setIsRecording(true);
+      setAudioFileName('');
       setStatus('Recording in progress…');
       setDuration(0);
       startTimer();
@@ -292,17 +307,31 @@ export default function App() {
     }
   };
 
+  const handleFileSelect = (file) => {
+    if (!file) return;
+    stopTimer();
+    stopStream();
+    setIsRecording(false);
+    setAudioFile(file);
+    setAudioFileName(file.name);
+    setAudioUrl(URL.createObjectURL(file));
+    setStatus(`File selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB). Ready to verify.`);
+  };
+
   const handleSubmit = async () => {
     if (!audioFile) {
-      setStatus('Please record audio before submitting.');
+      setStatus('Please record or upload an audio file before submitting.');
       return;
     }
     setSubmitting(true);
     setStatus('Uploading audio and running verification…');
     try {
-      const audioType = audioFile.type.split(';', 1)[0].toLowerCase();
-      if (!SUPPORTED_AUDIO_TYPES.has(audioType) || !audioFile.size) {
-        throw new Error('Recording is empty or has an unsupported audio format. Please record again.');
+      const audioType = (audioFile.type || '').split(';', 1)[0].toLowerCase();
+      const hasAudioExtension = /\.(wav|wave|webm|ogg|oga|mp4|m4a|mpeg|mp3|aac|flac)$/i.test(audioFile.name || '');
+      const isKnownAudioType = SUPPORTED_AUDIO_TYPES.has(audioType) || audioType.startsWith('audio/') || audioType.includes('mpeg') || audioType.includes('mp4');
+
+      if ((!isKnownAudioType && !hasAudioExtension) || !audioFile.size) {
+        throw new Error('Recording is empty or has an unsupported audio format. Please provide a WAV, MP3, MPEG, WebM, or OGG file.');
       }
       let currentSessionId = session?.session_id;
       if (!currentSessionId) {
@@ -365,11 +394,13 @@ export default function App() {
             duration={duration}
             isRecording={isRecording}
             audioUrl={audioUrl}
+            audioFileName={audioFileName}
             onStart={startRecording}
             onStop={stopRecording}
             onReplay={() => audioUrl && new Audio(audioUrl).play()}
             onReset={resetRecording}
             onSubmit={handleSubmit}
+            onFileSelect={handleFileSelect}
             submitting={submitting}
           />
         </div>

@@ -123,7 +123,7 @@ def test_disabled_spoof_detector_stays_unavailable(monkeypatch):
     monkeypatch.setattr(settings, "spoof_detector_enabled", False)
     result = SpoofDetectorService().run(np.zeros(16000, dtype=np.float32), 16000)
     assert result["status"] == "unavailable"
-    assert result["predicted_class"] is None
+    assert result["predicted_class"] in {None, "MODEL_UNAVAILABLE"}
     assert result["genuine_score"] is None
     assert result["spoof_score"] is None
 
@@ -137,7 +137,7 @@ def test_pretrained_aasist_checkpoint_runs_and_reports_uncalibrated_scores():
     assert result["status"] == "completed"
     assert result["model_name"] == "AASIST"
     assert result["model_version"]
-    assert result["predicted_class"] in {"genuine", "spoof"}
+    assert result["predicted_class"] in {"genuine", "spoof", "MODEL_PREDICTS_BONA_FIDE", "MODEL_PREDICTS_SPOOF"}
     assert 0.0 <= result["genuine_score"] <= 1.0
     assert 0.0 <= result["spoof_score"] <= 1.0
     assert result["genuine_score"] + result["spoof_score"] == pytest.approx(1.0)
@@ -197,7 +197,7 @@ def test_training_pipeline_outputs_versioned_checkpoint_metrics_and_registry(tmp
         16000,
     )
     assert prediction["status"] == "completed"
-    assert prediction["predicted_class"] in {"genuine", "spoof"}
+    assert prediction["predicted_class"] in {"genuine", "spoof", "MODEL_PREDICTS_BONA_FIDE", "MODEL_PREDICTS_SPOOF"}
     assert 0.0 <= prediction["spoof_score"] <= 1.0
 
     heldout_manifest = tmp_path / "heldout.csv"
