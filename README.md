@@ -1,4 +1,4 @@
-# Fusion — Deepfake-Resistant Identity Verification
+# Frame / Check — Deepfake-Resistant Identity Verification
 
 Hackathon prototype for Mastercard CSB-02: deepfake-resistant KYC onboarding. The demo implements short-lived sessions, second-device pairing, phone platform-authenticator verification, a fresh QR sequence, live face-frame screening, optional voice screening, and a transparent evidence report.
 
@@ -15,14 +15,17 @@ Implemented:
 - FastAPI health and session endpoints with five-minute session expiry.
 - Phone WebAuthn registration and authentication with user verification required; the backend verifies a signed assertion and stores only the public credential in memory.
 - Phone pairing through a session-specific QR token.
-- Six random, session-bound QR signals rotated every 1.5 seconds within a four-minute challenge lifetime.
+- Six compact, random QR signals; each remains on the phone until the server detects both a face in frame and the current code, within a four-minute challenge lifetime. Session/challenge routing binds each short payload.
+- The phone QR expands to a near-fullscreen view with persistent motion/glare instructions. The live camera preview remains normal; QR contrast enhancement is applied only to an internal scan-frame copy on the API.
 - The laptop workflow is split into ordered Phone, QR + video, Voice, and Report tabs. Later steps unlock only when their prerequisites are complete.
-- A figure-eight instruction and server-measured QR path check. The API examines ordered path samples for spatial spread, center crossings, and lobe coverage; insufficient evidence stays in review rather than being treated as a pass.
-- The laptop camera waits for the first valid, fresh QR lock before starting the ten-second recording timer. Users first hold the phone QR close and still so autofocus/auto-exposure can settle; after the lock, they move it slowly through a figure eight. A locally hosted, downloadable diagram is also overlaid on the live viewer during the movement.
-- During that ten-second QR capture the browser records video (without audio) and sends it, with explicit consent, to an in-memory API decoder. OpenCV decodes separate downscaled live preview frames for QR/path evidence. PyAV samples the recorded clip at about one frame per second; MediaPipe detects faces and an Apache-2.0 image classifier scores detected face crops. The uploaded clip and decoded images are discarded after analysis; only derived score/evidence metadata remains for the report.
+- The HDFC- and ICICI-inspired bank-portal tabs wrap the actual Frame verification UI in same-origin embedded views. Each portal runs its own session against the existing Frame backend, including phone pairing and WebAuthn, randomized QR/video screening, optional voice screening, and the evidence report; consent gates are unchanged. The larger, responsive hero copy and locally served Unsplash portraits make the portal mastheads easier to read. These are unofficial, unaffiliated presentation demos: there is no bank login, account opening, bank API, or SMS integration.
+- Bank artwork: HDFC and ICICI logo SVGs from [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:HDFC-Bank-Logo.svg) and [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:ICICI_Bank_Logo.svg); locally served hero photos from [Unsplash photo 1](https://images.unsplash.com/photo-1494790108377-be9c29b29330) and [Unsplash photo 2](https://images.unsplash.com/photo-1527980965255-d3b416303d12).
+- Six numbered square QR targets and server-measured ordered path validation replace the figure-eight gesture. Targets run around the frame edges to leave the typical centered face area unobstructed.
+- The laptop camera waits for a fresh QR lock inside box 1 and live face presence before recording. Users hold the phone steady for autofocus/auto-exposure, then move it slowly through boxes 2–6 in order while keeping a face in frame. A locally hosted, downloadable target guide is shown alongside the live viewer.
+- With explicit consent, the browser records the entire box-to-box movement (up to 1 minute, without audio) and sends it to an in-memory API decoder. OpenCV decodes separate downscaled live preview frames for QR/path evidence. PyAV decodes the full clip and samples frames every half-second, including the final frame; MediaPipe detects faces and an Apache-2.0 image classifier scores detected face crops. The uploaded clip and decoded images are discarded after analysis; only derived score/evidence metadata remains for the report.
 - The report records per-frame classifier score, relative face region, and timestamp, plus median/range and a basic score/face-count consistency signal. The temporal comparison is not a trained video model and the image classifier does not explain a physical artifact.
 - The live viewer draws a QR tracking box from the server's detected corner bounds. The browser requests continuous autofocus/exposure where supported, offers a one-shot autofocus refresh, and exposes available manual focus, exposure, zoom, and camera-selection controls. Hardware support varies; fixed-focus cameras cannot be refocused by software.
-- The optional Voice tab has its own directions and explicit microphone consent. It records at most eight seconds on user action, checks a fresh random three-word phrase with Whisper tiny.en, and screens for AI-like voice with an Apache-2.0 Wav2Vec2 classifier. No speaker enrollment or identity match is used; audio is decoded and processed in memory and not retained.
+- The optional Voice tab has its own directions and explicit microphone consent. It shows a live waveform while recording at most eight seconds on user action, checks a fresh random three-word phrase with Whisper tiny.en, and screens for AI-like voice with an Apache-2.0 Wav2Vec2 classifier. No speaker enrollment or identity match is used; audio is decoded and processed in memory and not retained.
 - A report hash is appended to an in-memory, hash-only audit chain. The simulator stores no challenge codes, transcript, face/audio samples, or session identifier; it is not a real blockchain and resets when the API restarts.
 - The phone's local authenticator verifies the user (biometric or device credential, depending on platform policy) before the credential signs a fresh server challenge. The biometric itself is never sent to the API.
 - A completed QR challenge produces **Review**; a failed randomized QR sequence produces **Challenge failed**. Research-model confidence does not make an identity decision and must not be used for real onboarding decisions.
@@ -79,19 +82,37 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000). API docs are at [http://127
 
 1. Start a session and pair a phone by scanning the QR.
 2. On first use, tap **Verify this phone** to register a phone platform credential and complete local user verification. The same credential can be reused for later sessions while the API process retains its public key record.
-3. Continue to **QR + video**, agree to camera use, and start the camera. Hold the phone's bright QR about 15–20 cm from the lens and still until the viewer shows **QR LOCK**; only then does the ten-second video recording begin. Follow the on-screen figure-eight diagram slowly while keeping the code facing the camera. The video classifier's first use may download several hundred MB; if it is unavailable the report says so.
-4. On the distinct **Voice** tab, optionally consent and start the voice check. Allow microphone access, then say the displayed fresh phrase once; recording stops automatically after eight seconds. Or skip voice without enabling the microphone.
+3. Continue to **QR + video**, agree to camera use, and start the camera. Place the bright phone QR in box 1 about 15–20 cm from the lens and hold it still until the viewer shows **QR LOCK**. Then move slowly through numbered boxes 2–6 in order. Recording starts at the lock and stops when all six QRs are scanned or after 1 minute; the complete clip is sampled through its final frame for AI face screening.
+4. On the distinct **Voice** tab, optionally consent and start the voice check. Allow microphone access, then say the displayed fresh phrase once; a live waveform appears while recording for up to eight seconds. Or skip voice without enabling the microphone.
 5. Open the **Report** tab after completing or skipping voice. QR sequence/path, phone proof, recorded-video face scores, temporal signal, phrase match, and audio anti-spoof signal are separate. A completed QR challenge remains **Review**; an incomplete required QR sequence is **Challenge failed**. The report includes an evidence hash in an in-memory simulated ledger.
+
+For a local UI-only walkthrough, `/hidden/control` is disabled by default. Enable it only on loopback during development with `ENABLE_QA_CONTROLS=true` and `APP_ENV=development`; never enable it for a tunnel or production deployment. Its next-step button simulates UI progression only and does not skip server-side verification or create evidence.
+
+### Operator recovery panel
+
+`/admin` is a separate, passwordless operator page. It lists in-memory session metadata and offers one limited recovery action: skip a video-processing step that the server currently reports as still processing. The action requires an operator reason, is recorded with a timestamp, discards video-screening results, and advances the participant page to optional voice/report. The resulting report marks video and capture quality unavailable, records the override reason, and is **Inconclusive**—never passed. The page does not expose pairing tokens, QR payloads, or evidence.
+
+Admin controls are disabled unless explicitly enabled in a non-production environment. Enable them in the same PowerShell window used to start the server:
+
+```powershell
+$env:APP_ENV = "development"
+$env:ENABLE_ADMIN_CONTROLS = "true"
+.\StartPrototype.bat
+```
+
+On the server computer, manually enter `http://127.0.0.1:8000/admin` in the browser. There is deliberately no link to this page in the participant UI. The page and every admin API reject non-loopback clients and requests bearing common reverse-proxy/tunnel headers, so a public tunnel cannot access the passwordless controls. Do not enable admin controls in production.
 
 ## Project files
 
 - `backend/app/main.py` — API, in-memory session/challenge state, server-side QR frame decoding, checks, and report.
-- `backend/app/screening.py` — in-memory recorded-video decoding, lazy face detector, and pinned image-classifier adapter with frame evidence/consistency summary.
+- `backend/app/screening.py` — live face-presence detection, in-memory recorded-video decoding, and pinned image-classifier adapter with frame evidence/consistency summary.
 - `backend/app/voice_screening.py` — in-memory audio decoding, phrase transcription, and lazy audio anti-spoof classifier adapter.
 - `backend/app/audit_ledger.py` — hash-only in-memory audit-chain simulator; not a blockchain.
 - `backend/app/static/index.html` — laptop onboarding and capture experience.
-- `backend/app/static/phone.html` — phone pairing and rotating challenge display.
-- `backend/app/static/figure-eight.svg` — original, downloadable movement guide shown over the QR capture preview.
+- `backend/app/static/admin.html` — loopback-only operator session monitor and video-step recovery page.
+- `backend/app/static/phone.html` — phone pairing and scan-acknowledged challenge display, sized for mobile screens.
+- `backend/app/static/qr-zones.svg` — original numbered square target guide.
+- `backend/app/static/qa-control.html` — local-only UI simulation control page, served only when explicitly enabled for development.
 - `WORKFLOW_UPDATES.md` — detailed notes on the staged tabs, QR lock/video recording, voice flow, and API changes.
 - `requirements.txt` — shared Python dependencies, including the server-side WebAuthn verifier and model runtimes.
 - `CheckRequirements.bat` — interpreter, package consistency, and import check.
@@ -103,7 +124,7 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000). API docs are at [http://127
 
 ## Frontend and detector reuse
 
-The current Fusion workbench UI is retained. The linked Swaraksha, voice, and blockchain application repositories are not copied into this project because their application-code licensing is unclear or their behavior is not appropriate for the selected scope. The adapters below use pinned, clearly licensed model artifacts instead.
+The current Frame / Check workbench UI is retained. The linked Swaraksha, voice, and blockchain application repositories are not copied into this project because their application-code licensing is unclear or their behavior is not appropriate for the selected scope. The adapters below use pinned, clearly licensed model artifacts instead.
 
 ### Pinned model sources and limits
 

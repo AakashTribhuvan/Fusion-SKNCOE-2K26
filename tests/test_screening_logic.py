@@ -1,8 +1,9 @@
 import io
-import math
+import os
 import unittest
 import wave
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -12,8 +13,16 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from backend.app.audit_ledger import SimulatedAuditLedger
 from backend.app import main as main_module
-from backend.app.main import ChallengeState, Observation, SessionState, _ensure_active, _figure_eight_coherence, utc_now
-from backend.app.screening import decode_video_frames
+from backend.app.main import (
+    QR_TARGET_ZONES,
+    ChallengeState,
+    Observation,
+    SessionState,
+    _ensure_active,
+    _square_target_progress,
+    utc_now,
+)
+from backend.app.screening import decode_video_frames, detect_live_faces
 from backend.app.voice_screening import decode_audio, normalize_phrase
 
 
@@ -36,36 +45,426 @@ class ScreeningLogicTests(unittest.TestCase):
         self.assertIn("FRAME / CHECK", response.text)
         self.assertIn("PHONE COMPANION", response.text)
         self.assertIn("Scan this live QR", response.text)
-        self.assertIn("keep the screen bright until the laptop shows QR LOCK", response.text)
-        self.assertIn("width:min(82vw,370px)", response.text)
+        self.assertIn("Hold this QR in box 1", response.text)
+        self.assertIn("width:min(calc(100vw - 52px),520px)", response.text)
+        self.assertIn("Each QR stays here until the laptop scans it", response.text)
+        self.assertIn("body.challenge-active .qr{width:min(94vw,620px,calc(100dvh - 330px))", response.text)
+        self.assertIn("challenge-instructions", response.text)
         self.assertNotIn('role="tablist"', response.text)
 
-    def test_figure_eight_path_passes(self) -> None:
+    def test_phone_qr_advances_only_after_the_current_code_is_scanned(self) -> None:
+        now = utc_now()
+        challenge = ChallengeState(
+            id=uuid4(),
+            created_at=now,
+            expires_at=now + timedelta(minutes=1),
+            codes=[f"code-{index}" for index in range(6)],
+            audio_phrase="amber copper garden",
+        )
+        state = SessionState(
+            id=uuid4(),
+            pair_token="long-enough-pair-token-value",
+            created_at=now,
+            expires_at=now + timedelta(minutes=1),
+            phone_verified=True,
+            challenge=challenge,
+        )
+        image = np.zeros((100, 100, 3), dtype=np.uint8)
+        success, encoded = main_module.cv2.imencode(".jpg", image)
+        self.assertTrue(success)
+        points = np.array([[[7, 17], [17, 17], [17, 27], [7, 27]]], dtype=np.float32)
+        code_zero = "F26|0|code-0"
+        code_one = "F26|1|code-1"
+        client = TestClient(main_module.app)
+
+        with (
+            patch.dict(main_module._sessions, {state.id: state}),
+            patch.object(main_module, "QR_PATH_SAMPLE_INTERVAL_MS", 0),
+            patch.object(main_module, "detect_live_faces", return_value=[{"x": 0.4, "y": 0.1, "width": 0.2, "height": 0.3}]),
+            patch.object(
+                main_module.cv2.QRCodeDetector,
+                "detectAndDecode",
+                side_effect=[
+                    (code_zero, points, None),
+                    (code_zero, points, None),
+                    (code_one, points, None),
+                ],
+            ),
+        ):
+            results = [
+                client.post(
+                    f"/api/sessions/{state.id}/challenge/{challenge.id}/scan?elapsed_ms={index * 250}",
+                    content=encoded.tobytes(),
+                    headers={"Content-Type": "image/jpeg"},
+                )
+                for index in range(3)
+            ]
+
+        self.assertEqual([response.status_code for response in results], [200, 200, 200])
+        self.assertEqual(results[0].json()["payload"], code_zero)
+        self.assertIsNone(results[1].json()["payload"])
+        self.assertEqual(results[2].json()["payload"], code_one)
+        self.assertEqual(challenge.current_qr_step, 2)
+        self.assertEqual(results[0].json()["face_count"], 1)
+
+    def test_qr_and_path_do_not_advance_when_no_face_is_detected(self) -> None:
+        now = utc_now()
+        challenge = ChallengeState(
+            id=uuid4(),
+            created_at=now,
+            expires_at=now + timedelta(minutes=1),
+            codes=["code-0", "code-1"],
+            audio_phrase="amber copper garden",
+        )
+        state = SessionState(
+            id=uuid4(),
+            pair_token="long-enough-pair-token-value",
+            created_at=now,
+            expires_at=now + timedelta(minutes=1),
+            phone_verified=True,
+            challenge=challenge,
+        )
+        image = np.zeros((100, 100, 3), dtype=np.uint8)
+        success, encoded = main_module.cv2.imencode(".jpg", image)
+        self.assertTrue(success)
+        points = np.array([[[7, 17], [17, 17], [17, 27], [7, 27]]], dtype=np.float32)
+        client = TestClient(main_module.app)
+
+        with (
+            patch.dict(main_module._sessions, {state.id: state}),
+            patch.object(main_module, "detect_live_faces", return_value=[]),
+            patch.object(
+                main_module.cv2.QRCodeDetector,
+                "detectAndDecode",
+                return_value=("F26|0|code-0", points, None),
+            ),
+        ):
+            response = client.post(
+                f"/api/sessions/{state.id}/challenge/{challenge.id}/scan?elapsed_ms=0",
+                content=encoded.tobytes(),
+                headers={"Content-Type": "image/jpeg"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["payload"])
+        self.assertEqual(response.json()["face_count"], 0)
+        self.assertEqual(challenge.current_qr_step, 0)
+        self.assertEqual(challenge.square_zone_progress, 0)
+
+    def test_challenge_qr_payload_is_compact_and_challenge_scoped(self) -> None:
+        now = utc_now()
+        challenge = ChallengeState(
+            id=uuid4(),
+            created_at=now,
+            expires_at=now + timedelta(minutes=1),
+            codes=["short-random-code"],
+            audio_phrase="amber copper garden",
+        )
+        state = SessionState(
+            id=uuid4(),
+            pair_token="long-enough-pair-token-value",
+            created_at=now,
+            expires_at=now + timedelta(minutes=1),
+            paired=True,
+            phone_verified=True,
+            challenge=challenge,
+        )
+        payloads: list[str] = []
+        client = TestClient(main_module.app)
+
+        with (
+            patch.dict(main_module._sessions, {state.id: state}),
+            patch.object(main_module, "_qr_png", side_effect=lambda payload: payloads.append(payload) or b"png"),
+        ):
+            response = client.get(
+                f"/api/sessions/{state.id}/challenge/{challenge.id}/qr/0",
+                headers={"X-Pair-Token": state.pair_token},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(payloads, ["F26|0|short-random-code"])
+        self.assertLess(len(payloads[0]), 24)
+        self.assertEqual(main_module._challenge_code_step(challenge, payloads[0]), 0)
+        self.assertIsNone(main_module._challenge_code_step(challenge, f"FUSION26|{state.id}|{challenge.id}|0|short-random-code"))
+        compact_qr = main_module.cv2.imdecode(
+            np.frombuffer(main_module._qr_png(payloads[0]), dtype=np.uint8),
+            main_module.cv2.IMREAD_COLOR,
+        )
+        verbose_qr = main_module.cv2.imdecode(
+            np.frombuffer(
+                main_module._qr_png(f"FUSION26|{state.id}|{challenge.id}|0|short-random-code"),
+                dtype=np.uint8,
+            ),
+            main_module.cv2.IMREAD_COLOR,
+        )
+        self.assertLess(compact_qr.shape[1], verbose_qr.shape[1])
+        self.assertEqual(main_module.cv2.QRCodeDetector().detectAndDecode(compact_qr)[0], payloads[0])
+
+    def test_qr_decode_uses_enhanced_grayscale_copy_after_normal_decode_fails(self) -> None:
+        frame = np.zeros((64, 96, 3), dtype=np.uint8)
+        points = np.array([[[10, 10], [30, 10], [30, 30], [10, 30]]], dtype=np.float32)
+        with patch.object(
+            main_module.cv2.QRCodeDetector,
+            "detectAndDecode",
+            side_effect=[
+                ("", None, None),
+                ("", None, None),
+                ("F26|0|random", points, None),
+            ],
+        ) as detect:
+            payload, decoded_points = main_module._decode_qr_payload(frame)
+
+        self.assertEqual(payload, "F26|0|random")
+        self.assertIs(decoded_points, points)
+        self.assertEqual(detect.call_count, 3)
+        self.assertEqual(detect.call_args_list[0].args[0].shape, (64, 96, 3))
+        self.assertEqual(detect.call_args_list[1].args[0].shape, (64, 96))
+
+    def test_live_camera_preview_is_mirrored_without_mirroring_scan_source(self) -> None:
+        html = (main_module.ROOT / "static" / "index.html").read_text(encoding="utf-8")
+        self.assertIn("#preview{position:absolute;inset:0;width:100%;height:100%;margin:0;transform:scaleX(-1)}", html)
+        self.assertIn(".target-zone[data-zone=\"1\"]{left:88%;top:22%}", html)
+        self.assertIn(".target-zone[data-zone=\"2\"]{left:88%;top:50%}", html)
+        self.assertIn(".target-zone[data-zone=\"3\"]{left:88%;top:78%}", html)
+        self.assertIn("background:rgba(21,92,74,.22)", html)
+        self.assertIn("Camera preview stays natural; only the scan copy is contrast-enhanced.", html)
+        self.assertIn("offsetX + (1 - result.box_x - result.box_width) * contentWidth", html)
+        self.assertIn("context.drawImage($('preview'), 0, 0, canvas.width, canvas.height)", html)
+        self.assertIn("No face detected. Keep your face visible in the center", html)
+
+    def test_live_face_detection_downscales_and_returns_normalized_boxes(self) -> None:
+        frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+        box = SimpleNamespace(origin_x=160, origin_y=90, width=160, height=180)
+
+        def detect(image) -> SimpleNamespace:
+            self.assertEqual(image.numpy_view().shape, (360, 640, 3))
+            return SimpleNamespace(
+                detections=[SimpleNamespace(bounding_box=box)]
+            )
+
+        detector = SimpleNamespace(detect=detect)
+        with patch("backend.app.screening._get_face_detector", return_value=detector):
+            faces = detect_live_faces(frame)
+
+        self.assertEqual(faces, [{"x": 0.25, "y": 0.25, "width": 0.25, "height": 0.5}])
+
+    def test_qr_targets_stay_at_frame_edges_away_from_centered_face_area(self) -> None:
+        self.assertEqual(len(QR_TARGET_ZONES), 6)
+        self.assertTrue(all(x <= 0.15 or x >= 0.85 for x, _ in QR_TARGET_ZONES))
+
+    def test_live_face_detection_requires_face_model_and_reports_failure(self) -> None:
+        now = utc_now()
+        challenge = ChallengeState(
+            id=uuid4(),
+            created_at=now,
+            expires_at=now + timedelta(minutes=1),
+            codes=["code-0"],
+            audio_phrase="amber copper garden",
+        )
+        state = SessionState(
+            id=uuid4(),
+            pair_token="long-enough-pair-token-value",
+            created_at=now,
+            expires_at=now + timedelta(minutes=1),
+            phone_verified=True,
+            challenge=challenge,
+        )
+        image = np.zeros((100, 100, 3), dtype=np.uint8)
+        success, encoded = main_module.cv2.imencode(".jpg", image)
+        self.assertTrue(success)
+        client = TestClient(main_module.app)
+
+        with (
+            patch.dict(main_module._sessions, {state.id: state}),
+            patch.object(main_module, "detect_live_faces", side_effect=RuntimeError("detector unavailable")),
+        ):
+            response = client.post(
+                f"/api/sessions/{state.id}/challenge/{challenge.id}/scan?elapsed_ms=0",
+                content=encoded.tobytes(),
+                headers={"Content-Type": "image/jpeg"},
+            )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertIn("Live face detection is unavailable", response.json()["detail"])
+
+    def test_hidden_qa_control_is_disabled_by_default(self) -> None:
+        with patch.dict(os.environ, {"ENABLE_QA_CONTROLS": "", "APP_ENV": "development"}):
+            client = TestClient(main_module.app, client=("127.0.0.1", 50000))
+            response = client.get("/hidden/control")
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_hidden_qa_control_requires_local_development(self) -> None:
+        with patch.dict(os.environ, {"ENABLE_QA_CONTROLS": "true", "APP_ENV": "development"}):
+            client = TestClient(main_module.app, client=("127.0.0.1", 50000))
+            response = client.get("/hidden/control")
+            status = client.get("/api/qa/status")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["cache-control"], "no-store")
+        self.assertEqual(status.json(), {"enabled": True})
+
+        with patch.dict(os.environ, {"ENABLE_QA_CONTROLS": "true", "APP_ENV": "production"}):
+            production = TestClient(main_module.app, client=("127.0.0.1", 50000))
+            response = production.get("/hidden/control")
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_hidden_qa_control_rejects_forwarded_tunnel_requests(self) -> None:
+        with patch.dict(os.environ, {"ENABLE_QA_CONTROLS": "true", "APP_ENV": "development"}):
+            client = TestClient(main_module.app, client=("127.0.0.1", 50000))
+            response = client.get("/hidden/control", headers={"CF-Connecting-IP": "203.0.113.5"})
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_admin_page_and_api_require_explicit_enablement(self) -> None:
+        client = TestClient(main_module.app)
+        with patch.dict(os.environ, {"APP_ENV": "development", "ENABLE_ADMIN_CONTROLS": ""}):
+            page = client.get("/admin")
+            api = client.get("/api/admin/sessions")
+
+        self.assertEqual(page.status_code, 404)
+        self.assertEqual(api.status_code, 404)
+
+    def test_admin_page_and_session_list_are_passwordless_and_loopback_only(self) -> None:
+        client = TestClient(main_module.app, client=("127.0.0.1", 50000))
+        with patch.dict(os.environ, {"APP_ENV": "development", "ENABLE_ADMIN_CONTROLS": "true"}):
+            page = client.get("/admin")
+            api = client.get("/api/admin/sessions")
+            home = client.get("/")
+            forwarded_page = client.get("/admin", headers={"CF-Connecting-IP": "203.0.113.5"})
+            forwarded_api = client.get("/api/admin/sessions", headers={"X-Forwarded-For": "203.0.113.5"})
+            remote = TestClient(main_module.app, client=("203.0.113.5", 50000))
+            remote_page = remote.get("/admin")
+            remote_api = remote.get("/api/admin/sessions")
+
+        self.assertEqual(page.status_code, 200)
+        self.assertEqual(page.headers["cache-control"], "no-store")
+        self.assertIn("local computer only", page.text)
+        self.assertNotIn("password", page.text.lower())
+        self.assertNotIn("/admin", home.text)
+        self.assertEqual(api.status_code, 200)
+        self.assertEqual(api.json(), {"sessions": []})
+        self.assertEqual(forwarded_page.status_code, 404)
+        self.assertEqual(forwarded_api.status_code, 404)
+        self.assertEqual(remote_page.status_code, 404)
+        self.assertEqual(remote_api.status_code, 404)
+
+    def test_admin_video_override_is_audited_and_reported_as_inconclusive(self) -> None:
+        now = utc_now()
+        challenge = ChallengeState(
+            id=uuid4(),
+            created_at=now,
+            expires_at=now + timedelta(minutes=1),
+            codes=[f"code-{index}" for index in range(6)],
+            audio_phrase="amber copper garden",
+            video_processing=True,
+        )
+        state = SessionState(
+            id=uuid4(),
+            pair_token="long-enough-pair-token-value",
+            created_at=now,
+            expires_at=now + timedelta(minutes=2),
+            phone_verified=True,
+            challenge=challenge,
+        )
+        client = TestClient(main_module.app, client=("127.0.0.1", 50000))
+
+        with (
+            patch.dict(
+                os.environ,
+                {"APP_ENV": "development", "ENABLE_ADMIN_CONTROLS": "true"},
+            ),
+            patch.dict(main_module._sessions, {state.id: state}),
+        ):
+            override = client.post(
+                f"/api/admin/sessions/{state.id}/skip-video",
+                json={"challenge_id": str(challenge.id), "reason": "Screening timed out during demo"},
+            )
+            report = client.post(
+                f"/api/sessions/{state.id}/evidence",
+                json={"challenge_id": str(challenge.id)},
+            )
+
+        self.assertEqual(override.status_code, 200)
+        self.assertTrue(override.json()["video_manually_skipped"])
+        self.assertTrue(challenge.video_submitted)
+        self.assertFalse(challenge.video_processing)
+        self.assertEqual(report.status_code, 200)
+        result = report.json()
+        self.assertEqual(result["decision"], "inconclusive")
+        self.assertEqual(result["checks"]["face_deepfake_analysis"]["status"], "unavailable")
+        self.assertEqual(result["checks"]["capture_quality"]["status"], "unavailable")
+        self.assertIn("Screening timed out during demo", result["checks"]["video_screening_override"]["detail"])
+        self.assertTrue(any("manually skipped" in item for item in result["limitations"]))
+
+    def test_admin_video_override_requires_processing_and_is_disabled_in_production(self) -> None:
+        now = utc_now()
+        challenge = ChallengeState(
+            id=uuid4(),
+            created_at=now,
+            expires_at=now + timedelta(minutes=1),
+            codes=[f"code-{index}" for index in range(6)],
+            audio_phrase="amber copper garden",
+        )
+        state = SessionState(
+            id=uuid4(),
+            pair_token="long-enough-pair-token-value",
+            created_at=now,
+            expires_at=now + timedelta(minutes=2),
+            phone_verified=True,
+            challenge=challenge,
+        )
+        client = TestClient(main_module.app, client=("127.0.0.1", 50000))
+        with (
+            patch.dict(
+                os.environ,
+                {"APP_ENV": "development", "ENABLE_ADMIN_CONTROLS": "true"},
+            ),
+            patch.dict(main_module._sessions, {state.id: state}),
+        ):
+            not_processing = client.post(
+                f"/api/admin/sessions/{state.id}/skip-video",
+                json={"challenge_id": str(challenge.id), "reason": "No processing is active"},
+            )
+
+        self.assertEqual(not_processing.status_code, 409)
+        self.assertFalse(challenge.video_submitted)
+
+        with patch.dict(
+            os.environ,
+            {"APP_ENV": "production", "ENABLE_ADMIN_CONTROLS": "true"},
+        ):
+            production_page = client.get("/admin")
+            production_api = client.get("/api/admin/sessions")
+        self.assertEqual(production_page.status_code, 404)
+        self.assertEqual(production_api.status_code, 404)
+
+    def test_square_target_path_passes_in_order(self) -> None:
         observations = [
             Observation(
                 payload="signal",
                 elapsed_ms=index * 250,
-                x=0.5 + 0.25 * math.sin(index * 2 * math.pi / 23),
-                y=0.5 + 0.2 * math.sin(2 * index * 2 * math.pi / 23),
+                x=point[0],
+                y=point[1],
             )
-            for index in range(24)
+            for index, point in enumerate(QR_TARGET_ZONES)
         ]
 
-        passed, detail = _figure_eight_coherence(observations)
+        progress, detail = _square_target_progress(observations)
 
-        self.assertTrue(passed)
-        self.assertIn("crossed its center", detail)
+        self.assertEqual(progress, len(QR_TARGET_ZONES))
+        self.assertIn("all six numbered square targets", detail)
 
-    def test_stationary_path_does_not_pass(self) -> None:
+    def test_square_target_path_rejects_skipped_box(self) -> None:
         observations = [
-            Observation(payload="signal", elapsed_ms=index * 250, x=0.5, y=0.5)
-            for index in range(20)
+            Observation(payload="signal", elapsed_ms=index * 250, x=point[0], y=point[1])
+            for index, point in enumerate((QR_TARGET_ZONES[1], QR_TARGET_ZONES[0], *QR_TARGET_ZONES[2:]))
         ]
 
-        passed, detail = _figure_eight_coherence(observations)
+        progress, detail = _square_target_progress(observations)
 
-        self.assertFalse(passed)
-        self.assertIn("Too few distinct", detail)
+        self.assertEqual(progress, 1)
+        self.assertIn("1 of 6 square targets", detail)
 
     def test_audio_phrase_normalization_ignores_punctuation(self) -> None:
         self.assertEqual(normalize_phrase("Amber, COPPER! garden."), "amber copper garden")
@@ -100,7 +499,7 @@ class ScreeningLogicTests(unittest.TestCase):
 
         self.assertGreaterEqual(len(frames), 2)
         self.assertEqual(frames[0][0], 0)
-        self.assertGreaterEqual(frames[-1][0], 1_000)
+        self.assertEqual(frames[-1][0], 2_000)
 
     def test_report_requires_video_screening(self) -> None:
         now = utc_now()

@@ -83,7 +83,7 @@
     .viewer-empty span{display:block;color:#96a49a;font:12px "Newsreader",Georgia,"Times New Roman",serif}
     .viewer-empty small{display:block;margin-top:12px;color:#d2bd54;font-size:8px}
     .viewer.streaming .viewer-empty{display:none}
-    #preview{position:absolute;inset:0;width:100%;height:100%;margin:0}
+    #preview{position:absolute;inset:0;width:100%;height:100%;margin:0;transform:scaleX(-1)}
     .qr-tracker{position:absolute;z-index:3;border:2px solid #d2bd54;box-shadow:0 0 0 1px #17241f,0 0 18px #d2bd5470;pointer-events:none;transition:left .12s linear,top .12s linear,width .12s linear,height .12s linear}
     .qr-tracker.is-stale{border-style:dashed;opacity:.65}
     .qr-tracker span{position:absolute;left:-2px;top:-21px;padding:2px 5px;background:#d2bd54;color:#17241f;font:8px "IBM Plex Mono",Consolas,monospace;white-space:nowrap}
@@ -125,27 +125,227 @@
     .motion-directions li+li{margin-top:5px}
     .motion-diagram{display:block;width:100%;max-width:190px}
     .guide-download{display:inline-block;margin-top:7px;color:var(--green);font-size:10px;font-weight:700}
-    .motion-overlay{position:absolute;z-index:2;right:12px;bottom:12px;width:112px;padding:5px;background:#17241fe8}
-    .motion-overlay img{display:block;width:100%;opacity:.9}
-    .motion-overlay span{display:block;color:#f4f3ef;text-align:center;font:8px "IBM Plex Mono",Consolas,monospace}
+    .target-zones{position:absolute;z-index:2;pointer-events:none}
+    .target-zone{position:absolute;display:grid;place-items:center;width:clamp(42px,7vw,64px);aspect-ratio:1;border:1px solid #8be1ca;background:rgba(21,92,74,.22);color:#fff;font:11px "IBM Plex Mono",Consolas,monospace;text-shadow:0 1px 3px #10251c;transform:translate(-50%,-50%);transition:background .15s,border-color .15s,box-shadow .15s}
+    .target-zone[data-zone="1"]{left:88%;top:22%}
+    .target-zone[data-zone="2"]{left:88%;top:50%}
+    .target-zone[data-zone="3"]{left:88%;top:78%}
+    .target-zone[data-zone="4"]{left:12%;top:78%}
+    .target-zone[data-zone="5"]{left:12%;top:50%}
+    .target-zone[data-zone="6"]{left:12%;top:22%}
+    .target-zone.active{border:2px solid #b7f1dc;background:rgba(36,92,72,.36);box-shadow:0 0 0 2px #245c4880}
+    .target-zone.complete{border-color:#8be1ca;background:rgba(21,92,74,.24);color:#fff}
+    .target-zone.complete::after{content:"✓";font-size:9px}
+    .face-indicator{position:absolute;z-index:4;top:9px;left:9px;padding:5px 8px;border:1px solid #d2bd5480;background:#17241fd9;color:#f5e9aa;font:9px "IBM Plex Mono",Consolas,monospace;letter-spacing:.04em}
+    .face-indicator.face-ready{border-color:#8be1ca80;color:#b7f1dc}
     .voice-result{margin-top:14px;padding:14px;border:1px solid var(--line);background:#edf2ec;color:#40554a;font-size:12px;line-height:1.7}
+    .waveform-wrap{margin-top:14px;padding:10px;border:1px solid var(--line);background:#182520}
+    #voice-waveform{display:block;width:100%;height:72px}
+    .waveform-label{display:flex;justify-content:space-between;margin-top:5px;color:#bcc9c0;font:8px "IBM Plex Mono",Consolas,monospace}
     .tab-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:17px}
     .secondary-btn{min-height:40px;padding:0 14px;border:1px solid #89948c;background:#f7f8f4;color:#263a32;font-size:12px;font-weight:700;cursor:pointer}
     .secondary-btn:disabled{opacity:.45;cursor:not-allowed}
-    @media(max-width:600px){.motion-directions{grid-template-columns:1fr}.motion-diagram{max-width:145px;margin:auto}.workflow-tab{min-width:95px;padding:7px 8px;font-size:10px}.motion-overlay{width:88px}}
+    .bank-portal{--bank-primary:#063b7a;--bank-accent:#e4ae00;overflow:hidden;border:1px solid #d7ddd6;background:#fff;color:#252a31;font:14px/1.5 Arial,Helvetica,sans-serif}
+    .bank-portal[data-bank="icici"]{--bank-primary:#f15a24;--bank-accent:#f15a24;background:#fff}
+    .bank-utility{display:flex;justify-content:center;align-items:center;min-height:27px;padding:4px 12px;background:#edf0f4;color:#50565c;text-align:center;font-size:10px}
+    .bank-masthead{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:56px;padding:10px clamp(16px,3vw,38px);background:#073b83;color:#fff}
+    .bank-wordmark{display:flex;align-items:center;gap:8px;color:inherit;text-decoration:none;font-size:17px;font-weight:800;white-space:nowrap}
+    .bank-symbol{display:grid;place-items:center;width:27px;height:24px;border:2px solid #fff;color:#fff;font-size:13px;font-weight:800}
+    .bank-header-meta{display:flex;align-items:center;gap:16px;color:#f3f6fc;font-size:10px}
+    .bank-header-meta span{white-space:nowrap}
+    .bank-header-meta .bank-badge{padding:5px 8px;border:1px solid #ffffff80;background:#ffffff14;font-size:8px;font-weight:700}
+    .bank-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;padding:7px clamp(16px,3vw,38px);border-bottom:1px solid #e7e9ec;background:#fff}
+    .bank-nav-links{display:flex;align-items:center;gap:clamp(12px,2vw,25px);color:#343a40;font-size:10px}
+    .bank-nav-links span{white-space:nowrap}
+    .bank-search{min-width:150px;padding:7px 10px;border:1px solid #dce1e7;border-radius:4px;color:#747b83;font-size:10px}
+    .bank-login{padding:7px 13px;border:0;border-radius:4px;background:#d71920;color:#fff;font-size:10px;font-weight:700}
+    .bank-login:disabled{opacity:1}
+    .bank-hero{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,.9fr);align-items:center;min-height:250px;padding:25px clamp(20px,5vw,62px);overflow:hidden}
+    .bank-portal[data-bank="hdfc"] .bank-hero{background:linear-gradient(105deg,#fff8c8 0%,#fff1a5 52%,#f9d94b 100%)}
+    .bank-portal[data-bank="icici"] .bank-hero{background:linear-gradient(108deg,#f36a23 0%,#f15a24 55%,#dc441c 100%);color:#fff}
+    .bank-hero-copy{position:relative;z-index:1;max-width:510px}
+    .bank-eyebrow{margin:0 0 8px;color:#525b65;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+    .bank-portal[data-bank="icici"] .bank-eyebrow{color:#fff4e9}
+    .bank-hero h2{max-width:470px;margin:0;font-size:clamp(25px,4.2vw,42px);font-weight:700;letter-spacing:-.04em;line-height:1.1}
+    .bank-hero p{max-width:440px;margin:11px 0;color:#454c54;font-size:12px;line-height:1.6}
+    .bank-portal[data-bank="icici"] .bank-hero p{color:#fff7f0}
+    .bank-hero .btn{min-height:38px;padding:0 18px;border:0;border-radius:3px;background:#073b83;font-size:10px;text-transform:uppercase}
+    .bank-portal[data-bank="icici"] .bank-hero .btn{background:#fff;color:#da4c1d}
+    .bank-hero-art{position:relative;display:block;width:100%;max-width:380px;height:205px;justify-self:end;overflow:hidden;border:4px solid #ffffffb8;border-radius:7px;background:#e9edf1;box-shadow:0 9px 25px #162b3b26}
+    .bank-hero-art img{display:block;width:100%;height:100%;object-fit:cover;object-position:center 42%}
+    .bank-portal[data-bank="icici"] .bank-hero-art{border-color:#ffffffc9}
+    .bank-portal[data-bank="icici"] .bank-hero-art img{object-position:center 40%}
+    .bank-quicklinks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;border-bottom:1px solid #e7e9ec;background:#e7e9ec}
+    .bank-quicklink{display:flex;align-items:center;gap:9px;min-height:58px;padding:11px 14px;background:#fff;color:#343a40;font-size:10px;font-weight:600}
+    .bank-quicklink i{display:grid;place-items:center;flex:none;width:27px;height:27px;border:1px solid #dfe4ea;border-radius:50%;color:var(--bank-primary);font-style:normal;font-size:13px}
+    .bank-content{padding:23px clamp(16px,3vw,38px) 25px;background:#f7f8fa}
+    .bank-content-heading{display:flex;justify-content:space-between;gap:12px;align-items:end;margin-bottom:13px}
+    .bank-content-heading h3{margin:0;color:#20262d;font-size:19px}
+    .bank-content-heading p{margin:4px 0 0;color:#69727c;font-size:10px}
+    .bank-category-tabs{display:flex;gap:18px;overflow:auto;margin-bottom:14px;border-bottom:1px solid #dfe3e8}
+    .bank-category-tabs span{padding:8px 2px;border-bottom:2px solid transparent;color:#626b75;font-size:9px;white-space:nowrap}
+    .bank-category-tabs span:first-child{border-color:var(--bank-primary);color:var(--bank-primary);font-weight:700}
+    .bank-body{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(220px,.75fr);gap:13px}
+    .bank-card,.bank-sidecard{padding:17px;border:1px solid #e0e4e9;border-radius:4px;background:#fff}
+    .bank-card h3,.bank-sidecard h3{margin:0 0 7px;color:#252a31;font-size:15px}
+    .bank-card p,.bank-sidecard p{color:#626b75;font-size:11px;line-height:1.65}
+    .bank-stepper{display:flex;gap:4px;margin:0 0 16px;padding:0;list-style:none}
+    .bank-stepper li{flex:1;padding:7px 3px;border-bottom:2px solid #e1e5e9;color:#8a9199;text-align:center;font-size:8px;text-transform:uppercase}
+    .bank-stepper li[aria-current="step"]{border-color:var(--bank-primary);color:var(--bank-primary);font-weight:700}
+    .bank-stepper li.complete{border-color:#5c9b75;color:#4a785c}
+    .bank-profile{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:13px 0}
+    .bank-profile div{padding:10px;border:1px solid #e8ebef;background:#f8f9fb}
+    .bank-profile small{display:block;color:#77808a;font-size:8px;text-transform:uppercase}
+    .bank-profile strong{display:block;margin-top:3px;font-size:11px}
+    .bank-demo-callout{margin:12px 0;padding:11px;border-left:3px solid var(--bank-primary);background:#f3f6fa;color:#46515c;font-size:11px;line-height:1.6}
+    .bank-check-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+    .bank-check-heading h3{margin:0;color:#252a31;font-size:17px}
+    .bank-check-heading p:last-child{margin:4px 0 0}
+    .bank-check-heading .bank-badge{flex:none;border-color:#d9dfe5;background:#f5f7f9;color:#606a75}
+    .bank-check-steps{display:flex;gap:5px;margin:0 0 16px;padding:0;list-style:none}
+    .bank-check-steps li{flex:1;padding:8px 4px;border-bottom:2px solid #e1e5e9;color:#8a9199;text-align:center;font-size:8px;font-weight:600;text-transform:uppercase}
+    .bank-check-steps li[aria-current="step"]{border-color:var(--bank-primary);color:var(--bank-primary)}
+    .bank-check-steps li.complete{border-color:#5c9b75;color:#4a785c}
+    .bank-check-card{display:flex;align-items:flex-start;gap:12px;padding:15px;border:1px solid #e5e9ed;background:#fafbfc}
+    .bank-check-card p{margin:5px 0 0}
+    .bank-check-card strong{color:#27313a;font-size:12px}
+    .bank-check-icon{display:grid;place-items:center;flex:none;width:37px;height:37px;border-radius:50%;background:#eef3f8;color:var(--bank-primary);font-size:19px}
+    .bank-qr-demo{position:relative;display:grid;place-items:center;width:104px;height:104px;margin:15px auto 10px;border:8px solid #fff;outline:1px solid #dbe1e7;background-color:#fff;background-image:repeating-conic-gradient(#182b3d 0% 25%,#fff 0% 50%);background-size:14px 14px}
+    .bank-qr-mark{padding:5px;background:#fff;color:#182b3d;font-size:10px;font-weight:800}
+    .bank-qr-caption{position:absolute;bottom:-20px;left:50%;width:150px;transform:translateX(-50%);color:#79828c;text-align:center;font-size:7px;font-weight:700;letter-spacing:.06em}
+    .bank-scan-progress{display:flex;justify-content:center;gap:7px;margin:19px 0 7px}
+    .bank-scan-progress span{display:grid;place-items:center;width:23px;height:23px;border:1px solid #cfd6dd;border-radius:50%;color:#7e8790;font-size:9px}
+    .bank-scan-progress span.complete{border-color:#4a8d63;background:#edf6ef;color:#39724f}
+    .bank-screening-preview{display:flex;align-items:center;gap:9px;min-height:44px;margin:13px 0;padding:11px;border:1px solid #e4e8ec;background:#f7f9fb;color:#56616d;font-size:10px}
+    .bank-screening-dot{width:8px;height:8px;border-radius:50%;background:#8e99a4}
+    .bank-screening-preview[data-state="working"] .bank-screening-dot{background:#d7a51d;animation:bank-pulse .8s ease-in-out infinite alternate}
+    .bank-screening-preview[data-state="complete"] .bank-screening-dot{background:#528361}
+    @keyframes bank-pulse{to{opacity:.3}}
+    .bank-check-results{display:grid;gap:1px;margin:13px 0;background:#e3e7eb}
+    .bank-check-results div{display:flex;justify-content:space-between;gap:12px;padding:10px;background:#f8f9fa;font-size:10px}
+    .bank-check-results strong{color:#64707a;font-size:9px}
+    .bank-consent{display:flex;gap:9px;align-items:flex-start;margin:13px 0;color:#59636e;font-size:11px;line-height:1.55}
+    .bank-consent input{flex:none;margin:2px 0 0;accent-color:var(--bank-primary)}
+    .bank-field{display:block;margin:13px 0;color:#46515c;font-size:10px;font-weight:700}
+    .bank-field input{display:block;width:100%;max-width:260px;min-height:40px;margin-top:5px;padding:8px 10px;border:1px solid #cbd1d8;border-radius:3px;background:#fff;color:#17241f;font:15px "IBM Plex Mono",Consolas,monospace;letter-spacing:.18em}
+    .bank-field input:focus-visible{outline:3px solid #81a8ed;outline-offset:2px}
+    .bank-otp{padding:10px 12px;border:1px dashed var(--bank-primary);background:#f8f9fb;font:700 17px "IBM Plex Mono",Consolas,monospace;letter-spacing:.16em}
+    .bank-status{min-height:22px;margin:9px 0;color:#52616e;font-size:11px}
+    .bank-result{padding:12px;border:1px solid #e5d5a7;background:#fff9e9;color:#69532b;font-size:12px;font-weight:750}
+    .bank-payload{overflow:auto;margin:12px 0;padding:12px;background:#152638;color:#d6e6f3;font:10px/1.65 "IBM Plex Mono",Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+    .bank-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}
+    .bank-actions .btn{min-height:38px;border-radius:3px;background:var(--bank-primary);border-color:var(--bank-primary);font-size:10px}
+    .bank-actions .btn:hover:not(:disabled){background:#163659;border-color:#163659}
+    .bank-actions .secondary-btn{border-radius:3px;font-size:10px}
+    .bank-sidecard{border-top:3px solid var(--bank-primary)}
+    .bank-help-link{display:block;padding:9px 0;border-bottom:1px solid #edf0f3;color:#414a53;font-size:10px}
+    .bank-help-link:last-child{border-bottom:0}
+    .bank-disclaimer{margin:0;padding:9px 14px;border-top:1px solid #e8d69e;background:#fff8e7;color:#6c582e;font-size:9px;line-height:1.6}
+    .bank-portal[data-bank="icici"] .bank-utility{background:#edf0f2}
+    .bank-portal[data-bank="icici"] .bank-masthead{min-height:50px;background:#f15a24}
+    .bank-portal[data-bank="icici"] .bank-symbol{border-color:#fff;border-radius:50%}
+    .bank-portal[data-bank="icici"] .bank-nav{min-height:42px}
+    .bank-portal[data-bank="icici"] .bank-nav-links span:first-child{border-bottom:2px solid #f15a24}
+    .bank-portal[data-bank="icici"] .bank-quicklink i{border-radius:8px}
+    .bank-wordmark{gap:0}
+    .bank-wordmark img{display:block;width:160px;height:32px;padding:3px 8px;border-radius:3px;background:#fff;object-fit:contain}
+    .bank-portal[data-bank="icici"] .bank-wordmark img{width:154px;height:36px}
+    .bank-hero{grid-template-columns:minmax(0,1.05fr) minmax(280px,.95fr);gap:clamp(22px,4vw,54px);min-height:365px;padding-top:32px;padding-bottom:32px}
+    .bank-hero-copy{max-width:590px}
+    .bank-eyebrow{margin-bottom:12px;font-size:12px}
+    .bank-hero h2{max-width:590px;font-size:clamp(36px,4.8vw,58px);line-height:1.04}
+    .bank-hero p{max-width:500px;margin:16px 0;font-size:16px;line-height:1.65}
+    .bank-hero .btn{min-height:46px;padding:0 20px;font-size:12px}
+    .bank-hero-art{position:relative;align-self:stretch;display:block;width:100%;max-width:none;height:310px;justify-self:stretch;overflow:hidden;border:1px solid #ffffffa8;border-radius:12px;background:#e9edf1;box-shadow:0 14px 35px #162b3b29}
+    .bank-hero-art img{display:block;width:100%;height:100%;object-fit:cover;object-position:center 36%;filter:none}
+    .bank-portal[data-bank="icici"] .bank-hero-art{border:1px solid #ffffffc9;background:#eee}
+    .bank-portal[data-bank="icici"] .bank-hero-art img{object-position:center 31%}
+    .bank-utility{font-size:12px}
+    .bank-header-meta,.bank-nav-links{font-size:12px}
+    .bank-quicklink{font-size:12px}
+    .bank-content-heading h3{font-size:23px}
+    .bank-content-heading p,.bank-card p,.bank-sidecard p{font-size:14px}
+    .bank-category-tabs span{font-size:11px}
+    .bank-card h3,.bank-sidecard h3{font-size:20px}
+    .bank-stepper li{font-size:10px}
+    .bank-help-link{font-size:13px}
+    .bank-disclaimer{font-size:11px}
+    .bank-card{padding:24px}
+    .bank-flow-frame{display:block;width:100%;min-height:980px;border:1px solid #dfe4e9;background:#f7f8f4}
+    .bank-flow-note{margin:0 0 14px;padding:14px 16px;border-left:4px solid var(--bank-primary);background:#f7f8fa;color:#34424b;font-size:14px;line-height:1.6}
+    .bank-flow-note strong{display:block;margin-bottom:3px;color:#1c2931;font-size:16px}
+    @media(max-width:760px){.bank-header-meta span:not(.bank-badge){display:none}.bank-nav-links{gap:10px;overflow:auto}.bank-search{display:none}.bank-hero{grid-template-columns:minmax(0,1fr) minmax(190px,.8fr);min-height:300px;padding:24px}.bank-hero-art{height:260px}.bank-body{grid-template-columns:1fr}.bank-sidecard{order:2}.bank-quicklink{justify-content:center;flex-direction:column;text-align:center;font-size:11px}}
+    @media(max-width:480px){.bank-utility{font-size:10px}.bank-masthead{min-height:52px;padding:9px 13px}.bank-wordmark img,.bank-portal[data-bank="icici"] .bank-wordmark img{width:132px;height:31px;padding:3px 6px}.bank-header-meta .bank-badge{font-size:8px}.bank-nav{padding:8px 13px}.bank-nav-links{gap:12px;font-size:10px}.bank-nav-links span:nth-last-child(n+4){display:none}.bank-login{padding:7px 10px;font-size:10px}.bank-hero{grid-template-columns:1fr;min-height:auto;gap:18px;padding:25px 18px 18px}.bank-eyebrow{font-size:11px}.bank-hero h2{font-size:36px}.bank-hero p{font-size:15px}.bank-hero-art{width:100%;height:250px;justify-self:stretch;margin:0;border-radius:10px}.bank-hero .btn{min-height:44px;font-size:12px}.bank-quicklinks{grid-template-columns:repeat(2,1fr)}.bank-quicklink{min-height:56px;flex-direction:row;justify-content:flex-start;padding:9px;font-size:11px;text-align:left}.bank-content{padding:20px 13px}.bank-content-heading{align-items:flex-start;flex-direction:column}.bank-stepper li{font-size:9px}.bank-profile{grid-template-columns:1fr}.bank-disclaimer{font-size:10px}.bank-flow-note{font-size:13px}.bank-card{padding:14px}.bank-flow-frame{min-height:1080px}}
+    @media(max-width:600px){.motion-directions{grid-template-columns:1fr}.motion-diagram{max-width:145px;margin:auto}.workflow-tab{min-width:95px;padding:7px 8px;font-size:10px}}
+    .bank-flow-context{display:none}
+    html.bank-flow-embedded{background:#f7f8f4;font-size:16px}
+    html.bank-flow-embedded body{background:#f7f8f4;font-size:16px}
+    html.bank-flow-embedded .shell{width:100%;max-width:none;padding:18px 20px 22px}
+    html.bank-flow-embedded .masthead,html.bank-flow-embedded .hero,html.bank-flow-embedded .workspace-head,html.bank-flow-embedded .page-foot,html.bank-flow-embedded #tab-hdfc,html.bank-flow-embedded #tab-icici,html.bank-flow-embedded #panel-hdfc,html.bank-flow-embedded #panel-icici{display:none!important}
+    html.bank-flow-embedded .bank-flow-context{display:block;margin-bottom:14px;padding:11px 14px;border-left:4px solid var(--bank-flow-accent);background:var(--bank-flow-soft);color:#31423a;font-size:14px;font-weight:700}
+    html.bank-flow-embedded[data-bank-flow="hdfc"]{--bank-flow-accent:#073b83;--bank-flow-soft:#eaf0f7;--green:#073b83;--green-soft:#eaf0f7;--line:#dce3ea;--paper:#fff}
+    html.bank-flow-embedded[data-bank-flow="icici"]{--bank-flow-accent:#f15a24;--bank-flow-soft:#fff0e8;--green:#e95420;--green-soft:#fff0e8;--line:#eadfd9;--paper:#fff}
+    html.bank-flow-embedded .workflow-tabs{gap:7px;margin:0 0 17px;padding:7px;border-color:#d8ded8;background:#fff}
+    html.bank-flow-embedded .workflow-tab{min-width:145px;min-height:50px;font-size:14px}
+    html.bank-flow-embedded .workflow-tab[aria-selected="true"]{border-color:var(--bank-flow-accent);background:var(--bank-flow-soft);color:var(--bank-flow-accent)}
+    html.bank-flow-embedded .card{padding:28px;border-radius:8px;background:#fff}
+    html.bank-flow-embedded .card h2{font-size:23px}
+    html.bank-flow-embedded .tab-intro,html.bank-flow-embedded .card-intro{font-size:16px;line-height:1.7}
+    html.bank-flow-embedded .btn{min-height:48px;font-size:15px}
+    html.bank-flow-embedded .pair-copy strong,html.bank-flow-embedded .step strong{font-size:16px}
+    html.bank-flow-embedded .pair-copy p,html.bank-flow-embedded .step p,html.bank-flow-embedded .consent,html.bank-flow-embedded .status{font-size:14px}
+    html.bank-flow-embedded .pill{font-size:12px}
+    html.bank-flow-embedded .motion-directions ol{font-size:14px}
+    html.bank-flow-embedded .guide-download{font-size:13px}
+    html.bank-flow-embedded .secondary-btn{min-height:45px;font-size:14px}
+    html.bank-flow-embedded #viewer{min-height:360px}
+    html.bank-flow-embedded #panel-voice .voice-result,html.bank-flow-embedded .check,html.bank-flow-embedded .notice{font-size:14px}
+    @media(max-width:600px){html.bank-flow-embedded .shell{padding:12px 10px 18px}html.bank-flow-embedded .workflow-tab{min-width:128px;font-size:13px}html.bank-flow-embedded .card{padding:18px}html.bank-flow-embedded .pair{align-items:flex-start;flex-direction:column}html.bank-flow-embedded .qr{width:110px;height:110px}html.bank-flow-embedded .motion-directions ol{font-size:13px}html.bank-flow-embedded #viewer{min-height:280px}}
+    body{font-size:16px}
+    .lede{font-size:18px;line-height:1.75}
+    .hero-note strong{font-size:15px}
+    .hero-note p,.workspace-head p{font-size:14px;line-height:1.7}
+    .workspace-head h2{font-size:23px}
+    .workflow-tab{min-height:48px;font-size:13px}
+    .btn,.secondary-btn{min-height:47px;font-size:14px}
+    .card h2{font-size:20px}
+    .tab-intro,.card-intro,.capture-card .muted,.consent,.motion-directions ol,.scan-directions,.status,.pair-copy p,.voice-result,.notice,.check,.foot{font-size:15px;line-height:1.65}
+    .pair-copy strong,.step strong{font-size:16px}
+    .pill{font-size:12px}
+    .step p,.check small{font-size:14px;line-height:1.65}
+    .camera-control-status,.camera-control-label{font-size:13px}
+    .privacy{font-size:13px;line-height:1.7}
+    .bank-card p,.bank-sidecard p,.bank-flow-note{font-size:15px;line-height:1.7}
+    .bank-quicklink,.bank-help-link{font-size:14px}
+    .bank-category-tabs span,.bank-check-steps li,.bank-stepper li{font-size:12px}
+    .bank-field,.bank-check-results div,.bank-screening-preview{font-size:13px}
+    .bank-check-card strong,.bank-status{font-size:14px}
+    .bank-actions .btn,.bank-actions .secondary-btn{font-size:13px}
+    .bank-disclaimer{font-size:12px;line-height:1.7}
+    @media(max-width:600px){.workflow-tab{min-width:112px;font-size:12px}.card h2{font-size:19px}.lede{font-size:16px}.tab-intro,.card-intro,.capture-card .muted,.consent,.motion-directions ol,.scan-directions,.status,.pair-copy p,.voice-result,.notice,.check,.foot{font-size:14px}.bank-quicklink{font-size:12px}html.bank-flow-embedded .workflow-tab{min-width:135px;font-size:14px}html.bank-flow-embedded .pair-copy p,html.bank-flow-embedded .step p,html.bank-flow-embedded .consent,html.bank-flow-embedded .status{font-size:15px}html.bank-flow-embedded .motion-directions ol{font-size:14px}}
   </style>
+  <script>
+    const bankFlow = new URLSearchParams(location.search).get('bank-flow');
+    if (bankFlow === 'hdfc' || bankFlow === 'icici') {
+      document.documentElement.classList.add('bank-flow-embedded');
+      document.documentElement.dataset.bankFlow = bankFlow;
+    }
+  </script>
 </head>
 <body>
 <main class="shell">
   <header class="masthead"><div class="brand"><div class="mark" aria-hidden="true"><i></i><i></i><i></i></div><span>FRAME/CHECK</span></div><span class="mast-label">Independent video screening &nbsp;·&nbsp; Field desk 01</span><div class="mast-right"><span id="service-status" class="environment">SERVICE CHECKING</span><span class="api-label">LOCAL API · 8000</span></div></header>
   <section class="hero"><div><p class="eyebrow">Video forensics / live QR screening</p><h1>Look closer.<span>Keep the evidence.</span></h1><p class="lede">Examine a live onboarding check for replay signals. Each observation is tied to a sampled moment; unavailable AI analysis stays visible.</p></div><aside class="hero-note"><strong>Scope note / 01</strong><p>No enrolled face baseline or speaker identity match is used. Licensed research classifiers screen live face frames and optional audio; scores are not calibrated proof. QR motion is a separate liveness signal.</p></aside></section>
 
-  <div class="workspace-head"><div><h2>Verification workspace</h2><p>Complete each check in order. Later tabs unlock as you finish the required steps.</p></div></div>
+  <div class="workspace-head"><div><h2>Verification workspace</h2><p>Run Frame’s real verification flow directly inside either unofficial bank-style portal.</p></div></div>
+  <div id="bank-flow-context" class="bank-flow-context" hidden></div>
   <nav class="workflow-tabs" role="tablist" aria-label="Verification steps">
     <button id="tab-phone" class="workflow-tab" type="button" role="tab" aria-selected="true" aria-controls="panel-phone">01 · Phone</button>
     <button id="tab-qr" class="workflow-tab" type="button" role="tab" aria-selected="false" aria-controls="panel-qr" disabled>02 · QR + video</button>
     <button id="tab-voice" class="workflow-tab" type="button" role="tab" aria-selected="false" aria-controls="panel-voice" disabled>03 · Voice</button>
     <button id="tab-report" class="workflow-tab" type="button" role="tab" aria-selected="false" aria-controls="panel-report" disabled>04 · Report</button>
+    <button id="tab-hdfc" class="workflow-tab" type="button" role="tab" aria-selected="false" aria-controls="panel-hdfc">HDFC · bank portal</button>
+    <button id="tab-icici" class="workflow-tab" type="button" role="tab" aria-selected="false" aria-controls="panel-icici">ICICI · bank portal</button>
   </nav>
   <div class="workspace">
     <section id="panel-phone" class="tab-panel" role="tabpanel" aria-labelledby="tab-phone">
@@ -171,19 +371,20 @@
 
     <section id="panel-qr" class="tab-panel" role="tabpanel" aria-labelledby="tab-qr" hidden>
       <section id="capture-card" class="card capture-card">
-        <div class="card-heading"><div><h2>QR liveness + recorded video screening</h2><p class="muted">The camera stays on until the first fresh QR is recognized. That lock starts a ten-second video recording; the server samples face crops from that clip for research-model screening.</p></div><span id="capture-mode" class="pill">CAMERA OFF</span></div>
-        <label class="consent"><input id="camera-consent" type="checkbox"><span>I consent to the live QR check and ten-second camera recording. QR preview frames and the recorded clip are sent to the API; the clip is sampled for face screening and then discarded. No video is saved to disk. The browser asks for camera permission separately.</span></label>
+        <div class="card-heading"><div><h2>QR target path + recorded video screening</h2><p class="muted">The camera waits for the fresh QR in box 1, then records the complete movement through all six numbered boxes. AI screens frames sampled from the recording, including its first and last frames.</p></div><span id="capture-mode" class="pill">CAMERA OFF</span></div>
+        <label class="consent"><input id="camera-consent" type="checkbox"><span>I consent to the live QR check and up to 1 minute of camera recording. QR preview frames and the full movement clip are sent to the API; sampled frames are screened in memory and the clip is then discarded. No video is saved to disk. The browser asks for camera permission separately.</span></label>
         <div class="motion-directions">
           <ol>
-            <li>Place the phone QR in the center guide. Bring it close to the laptop camera (about 15–20 cm) and hold it still so focus and auto-exposure can settle.</li>
-            <li>Wait for <strong>QR LOCK</strong>. The timed recording does not start before a valid, fresh QR is scanned. If it stays blurry, use Refresh autofocus or move the phone slightly farther away.</li>
-            <li>After the lock, move the phone slowly through one continuous figure eight in the camera plane. Keep the QR facing the camera, inside the view, and avoid glare until the ten-second recording ends.</li>
+            <li>Keep your face visible in the middle of the camera view. Hold the phone QR steady in box 1 at the right edge (about 15–20 cm away) until the laptop shows <strong>FACE IN FRAME</strong> and <strong>QR LOCK</strong>; the six targets stay around the edges, clear of your face.</li>
+            <li>Keep the QR in box 1 until it is clear and the laptop shows <strong>QR LOCK</strong>. Recording does not start until a fresh QR is read in box 1.</li>
+            <li>After QR LOCK, follow the perimeter path in the mirrored preview: move down boxes 2–3 on the right, across the bottom to box 4, then up boxes 5–6 on the left. Keep your face visible and pause with the QR in each box until it is confirmed.</li>
+            <li>For glare or reflections, raise phone brightness, wipe both lenses/screens, avoid direct lights reflecting off the phone, and tilt it only slightly until glare clears while keeping the QR mostly square to the camera.</li>
           </ol>
-          <div><img class="motion-diagram" src="/motion-guide.svg" alt="Figure-eight path diagram with direction arrows"><a class="guide-download" href="/motion-guide.svg" download="fusion-figure-eight-guide.svg">Download figure-eight guide</a></div>
+          <div><img class="motion-diagram" src="/qr-zones.svg" alt="Six numbered square QR target boxes around the edges, clear of the centered face"><a class="guide-download" href="/qr-zones.svg" download="frame-check-qr-zones.svg">Download QR target guide</a></div>
         </div>
-        <p id="scan-directions" class="scan-directions">The guide will appear over the live viewer when the QR locks. Keep the QR steady for the initial exposure/focus step; begin the figure eight only after the lock message.</p>
+        <p id="scan-directions" class="scan-directions">Keep your face visible in the center. Hold the QR in box 1 at the right edge until FACE IN FRAME and QR LOCK; recording begins then. Follow the perimeter boxes in order, keeping your face visible. Recording ends after box 6. Camera preview stays natural; only the scan copy is contrast-enhanced.</p>
         <div class="row"><button id="capture" class="btn" disabled>Start camera and find first QR</button><span id="capture-status" class="muted" role="status" aria-live="polite">Camera is off. No frames or video are being captured.</span></div>
-        <div id="viewer" class="viewer"><div class="viewer-frame"></div><div class="viewer-empty"><strong>CAMERA OFF</strong><span>Consent, then bring the phone QR into the center guide.</span><small>RECORDING STARTS AT QR LOCK</small></div><div id="qr-tracker" class="qr-tracker hidden" aria-hidden="true"><span>QR SEARCHING</span></div><div id="motion-overlay" class="motion-overlay hidden" aria-hidden="true"><img src="/motion-guide.svg" alt=""><span>MOVE SLOWLY · FIGURE EIGHT</span></div><video id="preview" class="hidden" autoplay muted playsinline aria-label="Live camera preview used to scan the phone QR code"></video></div>
+        <div id="viewer" class="viewer"><div class="viewer-frame"></div><div class="viewer-empty"><strong>CAMERA OFF</strong><span>Consent, then center your face and place the phone QR in target box 1.</span><small>FACE + QR LOCK REQUIRED TO START RECORDING</small></div><div id="face-indicator" class="face-indicator hidden" role="status" aria-live="polite">FACE CHECK WAITING</div><div id="target-zones" class="target-zones hidden" aria-hidden="true"><span class="target-zone" data-zone="1">1</span><span class="target-zone" data-zone="2">2</span><span class="target-zone" data-zone="3">3</span><span class="target-zone" data-zone="4">4</span><span class="target-zone" data-zone="5">5</span><span class="target-zone" data-zone="6">6</span></div><div id="qr-tracker" class="qr-tracker hidden" aria-hidden="true"><span>QR SEARCHING</span></div><video id="preview" class="hidden" autoplay muted playsinline aria-label="Mirrored live camera preview used to scan the phone QR code"></video></div>
         <div class="camera-controls" aria-label="Camera focus and exposure controls">
           <button id="refocus-camera" class="camera-control-button" type="button" disabled>REFRESH AUTOFOCUS</button>
           <label id="focus-control" class="camera-control hidden">FOCUS <input id="focus-distance" type="range" disabled><output id="focus-value"></output></label>
@@ -206,6 +407,7 @@
         </ol>
         <label class="consent"><input id="audio-consent" type="checkbox"><span>I consent to record and submit up to eight seconds of microphone audio for this phrase check and AI-voice screening. Audio is not saved and no voiceprint or speaker identity is created.</span></label>
         <p id="voice-prompt" class="voice-result hidden" aria-live="polite"></p>
+        <div id="waveform-wrap" class="waveform-wrap hidden"><canvas id="voice-waveform" aria-label="Live microphone waveform visualization"></canvas><div class="waveform-label"><span>LIVE AUDIO WAVEFORM</span><span>RECORDING · UP TO 8 SEC</span></div></div>
         <p id="voice-status" class="camera-control-status" role="status" aria-live="polite">Microphone is off. You can skip this optional step and view the report.</p>
         <div class="tab-actions">
           <button id="run-voice" class="btn" disabled>Start voice check</button>
@@ -223,6 +425,72 @@
         <div id="report" class="report"></div>
         <p id="limitations" class="foot"></p>
       </section>
+    </section>
+    <section id="panel-hdfc" class="tab-panel" role="tabpanel" aria-labelledby="tab-hdfc" hidden>
+      <div class="bank-portal" id="bank-hdfc" data-bank="hdfc">
+        <div class="bank-utility"><span>Personal banking for a brighter tomorrow</span></div>
+        <header class="bank-masthead">
+          <div class="bank-wordmark" aria-label="HDFC Bank-inspired demo"><img src="/assets/brands/hdfc-bank.svg" alt="HDFC Bank logo"></div>
+          <div class="bank-header-meta"><span class="bank-badge">UNOFFICIAL DEMO</span><span>You are in Personal Banking⌄</span><span>About Us</span><span>English⌄</span></div>
+        </header>
+        <nav class="bank-nav" aria-label="HDFC-style site navigation">
+          <div class="bank-nav-links"><span>Discover Products⌄</span><span>Need Help⌄</span><span>Better Money Choices⌄</span><span>Offers⌄</span></div>
+          <div class="bank-nav-links"><span class="bank-search">⌕ &nbsp; Search HDFC Bank</span><button class="bank-login" type="button" disabled>LOGIN⌄</button></div>
+        </nav>
+        <section class="bank-hero">
+          <div class="bank-hero-copy"><p class="bank-eyebrow">HDFC-style · Digital savings account</p><h2>A good start makes all the difference.</h2><p>Experience Frame’s live identity-verification workflow inside this unofficial bank-style account page.</p><button class="btn" type="button" data-bank-open-flow="hdfc">START VERIFICATION &nbsp; →</button></div>
+          <div class="bank-hero-art"><img src="/assets/hdfc-hero.jpg" alt="Portrait of a customer in an editorial-style hero photograph" loading="lazy" decoding="async"></div>
+        </section>
+        <div class="bank-quicklinks" aria-label="Popular HDFC-style services">
+          <button class="bank-quicklink" type="button" data-bank-open-flow="hdfc"><i>＋</i>Open an account</button><div class="bank-quicklink"><i>⌕</i>Track application</div><div class="bank-quicklink"><i>⌂</i>Find a branch</div><div class="bank-quicklink"><i>▤</i>Service requests</div>
+        </div>
+        <section class="bank-content">
+          <div class="bank-content-heading"><div><h3>Open a Savings Account</h3><p>Explore a savings account page with Frame identity verification built into the journey.</p></div><span>View all accounts &nbsp; →</span></div>
+          <div class="bank-category-tabs" aria-label="Savings account categories"><span>Popular</span><span>Premium</span><span>Senior Citizen</span><span>Women</span><span>Kids</span><span>Others</span></div>
+          <div class="bank-body">
+            <section class="bank-card">
+              <h3>Frame identity verification</h3>
+              <p class="bank-flow-note"><strong>Live Frame software · HDFC-style account context</strong>Phone verification, randomized QR challenge, consented live video screening, optional voice screening, and the evidence report all use this project’s existing UI, backend, and models. Camera and microphone are requested only by the corresponding consented steps.</p>
+              <iframe id="bank-flow-hdfc" class="bank-flow-frame" title="Frame live identity verification inside the unofficial HDFC-inspired account portal" loading="lazy" allow="camera; microphone; publickey-credentials-get; publickey-credentials-create"></iframe>
+            </section>
+            <aside class="bank-sidecard"><h3>Secure identity check</h3><div class="bank-help-link">Phone passkey verification</div><div class="bank-help-link">Six-step live QR challenge</div><div class="bank-help-link">Video and optional voice screening</div><div class="bank-demo-callout">Unofficial HDFC-inspired page<br><strong>Powered by Frame / Check</strong><br>No HDFC login, banking API, or account opening is connected.</div></aside>
+          </div>
+        </section>
+        <p class="bank-disclaimer">Unofficial HDFC-inspired integration demo; not affiliated with HDFC Bank. Frame’s real local verification backend runs inside this bank-style page. No real bank login or account service is connected.</p>
+      </div>
+    </section>
+    <section id="panel-icici" class="tab-panel" role="tabpanel" aria-labelledby="tab-icici" hidden>
+      <div class="bank-portal" id="bank-icici" data-bank="icici">
+        <div class="bank-utility">Calls from ICICI Bank beginning with 1600 are official and legitimate</div>
+        <header class="bank-masthead">
+          <div class="bank-wordmark" aria-label="ICICI Bank-inspired demo"><img src="/assets/brands/icici-bank.svg" alt="ICICI Bank logo"></div>
+          <div class="bank-header-meta"><span class="bank-badge">UNOFFICIAL DEMO</span><span>Personal</span><span>NRI</span><span>Business</span></div>
+        </header>
+        <nav class="bank-nav" aria-label="ICICI-style site navigation">
+          <div class="bank-nav-links"><span>Resources</span><span>About</span><span>Help</span><span>☎ &nbsp; 1800 1080</span><span>♡</span><span>India⌄</span></div>
+          <div class="bank-nav-links"><span class="bank-search">⌕ &nbsp; Search “Savings Account”</span><button class="bank-login" type="button" disabled>Login⌄</button></div>
+        </nav>
+        <section class="bank-hero">
+          <div class="bank-hero-copy"><p class="bank-eyebrow">Personal Banking &nbsp; › &nbsp; Savings Account</p><h2>Open a Savings Account. Make it yours.</h2><p>Experience Frame’s live identity-verification workflow inside this unofficial bank-style account page.</p><button class="btn" type="button" data-bank-open-flow="icici">START VERIFICATION &nbsp; →</button></div>
+          <div class="bank-hero-art"><img src="/assets/icici-hero.jpg" alt="Portrait of a customer in a bright, natural-light hero photograph" loading="lazy" decoding="async"></div>
+        </section>
+        <div class="bank-quicklinks" aria-label="Popular ICICI-style services">
+          <div class="bank-quicklink"><i>▣</i>Service request</div><div class="bank-quicklink"><i>⌕</i>Track applications</div><div class="bank-quicklink"><i>✓</i>Smart lock</div><div class="bank-quicklink"><i>▤</i>Block card</div>
+        </div>
+        <section class="bank-content">
+          <div class="bank-content-heading"><div><h3>Open a Savings Account</h3><p>Explore a savings account page with Frame identity verification built into the journey.</p></div><span>Features and benefits &nbsp; →</span></div>
+          <div class="bank-category-tabs" aria-label="ICICI-style savings account categories"><span>Popular</span><span>Premium</span><span>Senior Citizen</span><span>Women</span><span>Kids</span><span>Others</span></div>
+          <div class="bank-body">
+            <section class="bank-card">
+              <h3>Frame identity verification</h3>
+              <p class="bank-flow-note"><strong>Live Frame software · ICICI-style account context</strong>Phone verification, randomized QR challenge, consented live video screening, optional voice screening, and the evidence report all use this project’s existing UI, backend, and models. Camera and microphone are requested only by the corresponding consented steps.</p>
+              <iframe id="bank-flow-icici" class="bank-flow-frame" title="Frame live identity verification inside the unofficial ICICI-inspired account portal" loading="lazy" allow="camera; microphone; publickey-credentials-get; publickey-credentials-create"></iframe>
+            </section>
+            <aside class="bank-sidecard"><h3>Secure identity check</h3><div class="bank-help-link">Phone passkey verification</div><div class="bank-help-link">Six-step live QR challenge</div><div class="bank-help-link">Video and optional voice screening</div><div class="bank-demo-callout">Unofficial ICICI-inspired page<br><strong>Powered by Frame / Check</strong><br>No ICICI login, banking API, or account opening is connected.</div></aside>
+          </div>
+        </section>
+        <p class="bank-disclaimer">Unofficial ICICI-inspired integration demo; not affiliated with ICICI Bank. Frame’s real local verification backend runs inside this bank-style page. No real bank login or account service is connected.</p>
+      </div>
     </section>
   </div>
   <footer class="page-foot"><span>Frame / Check &nbsp;·&nbsp; Local verification desk</span><span>Model output is a screening signal, not proof of identity or fraud.</span><a href="https://github.com/swapnil-1310/Swaraksha/tree/feat/video-forensics-frontend/frontend/src" target="_blank" rel="noreferrer">Reference frontend ↗</a></footer>
@@ -244,6 +512,11 @@
   let activeCameraStream = null;
   let cameraSwitchInProgress = false;
   let videoRecordingActive = false;
+  let videoProcessingWatch = false;
+  let adminOverrideObserved = false;
+  let videoUploadController = null;
+  let qaMode = false;
+  let qaStageIndex = 0;
   const message = (text) => { $('message').textContent = text; };
   const errorMessage = (error) => {
     if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
@@ -273,6 +546,83 @@
     }
     return data;
   };
+  const updateTargetZones = (progress) => {
+    document.querySelectorAll('.target-zone').forEach((zone) => {
+      const number = Number(zone.dataset.zone);
+      zone.classList.toggle('complete', number <= progress);
+      zone.classList.toggle('active', number === progress + 1 && progress < 6);
+    });
+  };
+  const startWaveform = async (stream) => {
+    const AudioContextType = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextType) throw new Error('This browser does not support a live audio waveform.');
+    const audioContext = new AudioContextType();
+    let source;
+    let analyser;
+    let animationFrame = 0;
+    try {
+      source = audioContext.createMediaStreamSource(stream);
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 1024;
+      source.connect(analyser);
+      await audioContext.resume();
+      const canvas = $('voice-waveform');
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Could not display the microphone waveform.');
+      const samples = new Uint8Array(analyser.fftSize);
+      const draw = () => {
+        const bounds = canvas.getBoundingClientRect();
+        const ratio = window.devicePixelRatio || 1;
+        const width = Math.max(1, Math.round(bounds.width * ratio));
+        const height = Math.max(1, Math.round(bounds.height * ratio));
+        if (canvas.width !== width || canvas.height !== height) {
+          canvas.width = width;
+          canvas.height = height;
+        }
+        analyser.getByteTimeDomainData(samples);
+        context.clearRect(0, 0, width, height);
+        context.beginPath();
+        context.strokeStyle = '#8be1ca';
+        context.lineWidth = Math.max(1, 1.5 * ratio);
+        for (let index = 0; index < samples.length; index += 1) {
+          const x = (index / (samples.length - 1)) * width;
+          const y = (samples[index] / 255) * height;
+          if (index === 0) context.moveTo(x, y);
+          else context.lineTo(x, y);
+        }
+        context.stroke();
+        animationFrame = requestAnimationFrame(draw);
+      };
+      $('waveform-wrap').classList.remove('hidden');
+      draw();
+      return async () => {
+        cancelAnimationFrame(animationFrame);
+        source.disconnect();
+        analyser.disconnect();
+        $('waveform-wrap').classList.add('hidden');
+        await audioContext.close();
+      };
+    } catch (error) {
+      if (source) source.disconnect();
+      if (analyser) analyser.disconnect();
+      if (audioContext.state !== 'closed') await audioContext.close();
+      throw error;
+    }
+  };
+  const positionTargetZones = () => {
+    const viewer = $('viewer').getBoundingClientRect();
+    const video = $('preview');
+    const width = video.videoWidth;
+    const height = video.videoHeight;
+    if (!width || !height || !viewer.width || !viewer.height) return;
+    const contentWidth = Math.min(viewer.width, viewer.height * width / height);
+    const contentHeight = Math.min(viewer.height, viewer.width * height / width);
+    const layer = $('target-zones');
+    layer.style.left = `${(viewer.width - contentWidth) / 2}px`;
+    layer.style.top = `${(viewer.height - contentHeight) / 2}px`;
+    layer.style.width = `${contentWidth}px`;
+    layer.style.height = `${contentHeight}px`;
+  };
   const captureVoicePhrase = async (activeChallenge) => {
     const prompt = await request(`/api/sessions/${session.id}/challenge/${activeChallenge.id}/audio-prompt`);
     if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
@@ -284,6 +634,7 @@
       audio: {channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true},
       video: false,
     });
+    let stopWaveform = async () => {};
     try {
       const mimeType = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4']
         .find(type => MediaRecorder.isTypeSupported(type));
@@ -296,12 +647,20 @@
         recorder.addEventListener('error', () => reject(new Error('The browser could not record the microphone input.')));
         recorder.addEventListener('stop', () => resolve(new Blob(chunks, {type: recorder.mimeType || 'audio/webm'})), {once:true});
         recorder.start();
-        $('voice-status').textContent = 'Recording now. Say the phrase once at a natural pace; recording stops automatically after eight seconds.';
         setTimeout(() => {
           if (recorder.state !== 'inactive') recorder.stop();
         }, 8_000);
       });
+      let waveformWarning = '';
+      try {
+        stopWaveform = await startWaveform(stream);
+      } catch (error) {
+        waveformWarning = ` Live waveform unavailable: ${error.message}`;
+      }
+      $('voice-status').textContent = `Recording now. Say the phrase once at a natural pace; recording stops automatically after eight seconds.${waveformWarning}`;
       const blob = await recording;
+      await stopWaveform();
+      stopWaveform = async () => {};
       if (!blob.size) throw new Error('No microphone audio was captured. Check microphone permission and try again.');
       const result = await request(`/api/sessions/${session.id}/challenge/${activeChallenge.id}/audio`, {
         method: 'POST',
@@ -314,6 +673,7 @@
       $('voice-status').textContent = `Voice check complete · phrase ${result.phrase_check.status.toUpperCase()} · AI-voice screening ${result.anti_spoof_check.status.toUpperCase()}. Audio was processed and discarded.`;
       return result;
     } finally {
+      await stopWaveform();
       stream.getTracks().forEach(track => track.stop());
     }
   };
@@ -480,6 +840,8 @@
     }
   };
   const positionQrTracker = (result) => {
+    positionTargetZones();
+    if (result.zone_progress != null) updateTargetZones(result.zone_progress);
     const tracker = $('qr-tracker');
     if (result.box_x == null || result.box_y == null || result.box_width == null || result.box_height == null) {
       if (!tracker.classList.contains('hidden')) {
@@ -500,7 +862,7 @@
     const contentHeight = Math.min(viewer.height, viewer.width * height / width);
     const offsetX = (viewer.width - contentWidth) / 2;
     const offsetY = (viewer.height - contentHeight) / 2;
-    tracker.style.left = `${offsetX + result.box_x * contentWidth}px`;
+    tracker.style.left = `${offsetX + (1 - result.box_x - result.box_width) * contentWidth}px`;
     tracker.style.top = `${offsetY + result.box_y * contentHeight}px`;
     tracker.style.width = `${result.box_width * contentWidth}px`;
     tracker.style.height = `${result.box_height * contentHeight}px`;
@@ -521,7 +883,7 @@
     }
   };
   checkService();
-  const stages = ['phone', 'qr', 'voice', 'report'];
+  const stages = ['phone', 'qr', 'voice', 'report', 'hdfc', 'icici'];
   const activateStage = (stage) => {
     const tab = $(`tab-${stage}`);
     if (!tab || tab.disabled) return;
@@ -530,7 +892,95 @@
       $(`tab-${name}`).setAttribute('aria-selected', String(selected));
       $(`panel-${name}`).hidden = !selected;
     }
+    if (stage === 'hdfc' || stage === 'icici') {
+      const frame = $(`bank-flow-${stage}`);
+      if (frame && !frame.hasAttribute('src')) frame.src = `/?bank-flow=${stage}`;
+    }
   };
+  const continueAfterVideoOverride = (reason) => {
+    adminOverrideObserved = true;
+    videoProcessingWatch = false;
+    if (videoUploadController) videoUploadController.abort();
+    challengeReady = false;
+    captureRunning = false;
+    $('capture').disabled = true;
+    $('capture-mode').textContent = 'VIDEO SKIPPED · ADMIN OVERRIDE';
+    $('capture-status').textContent = `ADMIN OVERRIDE · Video screening was skipped: ${reason} No video result was produced.`;
+    $('queue-copy').textContent = 'Video screening was manually skipped. Continue to the optional voice check or skip it to see an inconclusive report.';
+    $('tab-voice').disabled = false;
+    $('tab-qr').disabled = false;
+    $('tab-phone').disabled = false;
+    $('challenge').disabled = true;
+    message('An administrator skipped video processing. The final report will label it unavailable, not passed.');
+    activateStage('voice');
+  };
+  const monitorVideoOverride = async () => {
+    while (videoProcessingWatch && !adminOverrideObserved) {
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      if (!videoProcessingWatch || !session) return;
+      try {
+        const current = await request(`/api/sessions/${session.id}`);
+        if (current.video_manually_skipped) {
+          continueAfterVideoOverride(current.video_override_reason || 'No reason supplied.');
+          return;
+        }
+      } catch (error) {
+        if (videoProcessingWatch) {
+          $('capture-status').textContent = `Video processing is still waiting. Admin-override status could not be refreshed: ${errorMessage(error)}`;
+        }
+      }
+    }
+  };
+  const bankFlowFrames = document.querySelectorAll('.bank-flow-frame');
+  if (bankFlow) {
+    const context = $('bank-flow-context');
+    if (context) {
+      context.textContent = `${bankFlow.toUpperCase()}-inspired portal · Live Frame verification backend`;
+      context.hidden = false;
+    }
+    let reportedHeight = 0;
+    let resizeRequested = false;
+    const reportEmbeddedHeight = () => {
+      resizeRequested = false;
+      const height = Math.ceil(Math.max(document.documentElement.scrollHeight, document.body.scrollHeight));
+      if (height === reportedHeight || window.parent === window) return;
+      reportedHeight = height;
+      window.parent.postMessage({type: 'frame:bank-flow-height', bank: bankFlow, height}, location.origin);
+    };
+    const scheduleHeightReport = () => {
+      if (resizeRequested) return;
+      resizeRequested = true;
+      requestAnimationFrame(reportEmbeddedHeight);
+    };
+    new ResizeObserver(scheduleHeightReport).observe(document.body);
+    new MutationObserver(scheduleHeightReport).observe(document.body, {
+      attributes: true,
+      characterData: true,
+      childList: true,
+      subtree: true,
+    });
+    window.addEventListener('resize', scheduleHeightReport);
+    scheduleHeightReport();
+  } else {
+    window.addEventListener('message', (event) => {
+      if (event.origin !== location.origin || event.data?.type !== 'frame:bank-flow-height') return;
+      if (!Number.isSafeInteger(event.data.height) || event.data.height < 400 || event.data.height > 8000) return;
+      if (event.data.bank !== 'hdfc' && event.data.bank !== 'icici') return;
+      const frame = $(`bank-flow-${event.data.bank}`);
+      if (!frame || event.source !== frame.contentWindow) return;
+      frame.style.height = `${event.data.height}px`;
+    });
+  }
+  document.querySelectorAll('.bank-portal').forEach((portal) => {
+    portal.addEventListener('click', (event) => {
+      if (!(event.target instanceof Element)) return;
+      const trigger = event.target.closest('[data-bank-open-flow]');
+      if (!trigger) return;
+      const bank = trigger.dataset.bankOpenFlow;
+      activateStage(bank);
+      $(`bank-flow-${bank}`)?.scrollIntoView({behavior: 'smooth', block: 'start'});
+    });
+  });
   stages.forEach((stage) => $(`tab-${stage}`).addEventListener('click', () => {
     if (captureRunning && stage !== 'qr') {
       message('Stay on QR + video while the camera capture is running.');
@@ -538,6 +988,58 @@
     }
     activateStage(stage);
   }));
+  if (new URLSearchParams(location.search).get('qa') === '1') {
+    request('/api/qa/status').then(({enabled}) => {
+      qaMode = enabled === true;
+      window.parent.postMessage({type: 'qa-ready', enabled: qaMode}, location.origin);
+    }).catch((error) => {
+      window.parent.postMessage({type: 'qa-ready', enabled: false, detail: error.message}, location.origin);
+    });
+  }
+  const advanceQaStage = () => {
+    if (!qaMode) return {ok: false, detail: 'QA simulation is disabled.'};
+    if (captureRunning || voiceRunning || reportSubmitted) return {ok: false, detail: 'Wait for the current action to finish before advancing.'};
+    qaStageIndex += 1;
+    if (qaStageIndex === 1) {
+      $('start-area').classList.add('hidden');
+      $('session-area').classList.remove('hidden');
+      $('pair-area').classList.add('hidden');
+      $('paired-area').classList.remove('hidden');
+      $('session-status').textContent = 'QA SIMULATED · PHONE VERIFIED';
+      $('phone-proof-status').textContent = 'Simulation only; no phone authenticator was used.';
+      $('challenge').disabled = true;
+      $('tab-qr').disabled = false;
+      activateStage('qr');
+      $('capture-status').textContent = 'QA SIMULATION · Camera and QR scan skipped; no recording or video screening was performed.';
+      return {ok: true, stage: 'QR + video'};
+    }
+    if (qaStageIndex === 2) {
+      $('tab-voice').disabled = false;
+      $('capture-mode').textContent = 'QA SIMULATION · NO RECORDING';
+      $('voice-status').textContent = 'QA SIMULATION · Voice recording and audio analysis were skipped.';
+      activateStage('voice');
+      return {ok: true, stage: 'Voice'};
+    }
+    if (qaStageIndex === 3) {
+      $('tab-report').disabled = false;
+      $('report-decision').textContent = 'QA SIMULATION ONLY · No phone, QR, video, or voice evidence was collected or submitted.';
+      $('report').replaceChildren();
+      const notice = document.createElement('div');
+      notice.className = 'notice';
+      notice.textContent = 'This is a UI-only QA preview. It is not a verification result and does not change server-side session, challenge, or report state.';
+      $('report').append(notice);
+      $('limitations').textContent = 'Use the normal workflow for any real capture. QA controls are available only when explicitly enabled on a local development server.';
+      activateStage('report');
+      return {ok: true, stage: 'Report'};
+    }
+    qaStageIndex = 3;
+    return {ok: false, detail: 'The QA workflow is already at its final step.'};
+  };
+  window.addEventListener('message', (event) => {
+    if (!qaMode || event.origin !== location.origin || event.source !== window.parent || event.data?.type !== 'qa-advance') return;
+    const result = advanceQaStage();
+    window.parent.postMessage({type: 'qa-advance-result', ...result}, location.origin);
+  });
   const showPairState = (isPaired, isVerified = false) => {
     paired = isPaired;
     $('pair-area').classList.toggle('hidden', paired);
@@ -721,38 +1223,61 @@
         challenge = await request(`/api/sessions/${session.id}/challenge`, { method: 'POST' });
       }
       $('capture-mode').textContent = 'WAITING FOR QR LOCK';
-      $('capture-status').textContent = 'Hold the phone QR close to the camera and still. Focus and auto-exposure are settling; the ten-second recording starts only when the first fresh QR is recognized.';
+      $('face-indicator').classList.remove('hidden', 'face-ready');
+      $('face-indicator').textContent = 'FACE CHECK · CENTER YOUR FACE';
+      $('target-zones').classList.remove('hidden');
+      updateTargetZones(0);
+      $('capture-status').textContent = 'Keep your face visible in the center. Hold the phone QR in box 1 at the right edge; recording starts only after both a face and the first fresh QR are detected.';
       let firstQrAt = null;
+      let zoneProgress = 0;
+      const targetCount = challenge.target_count;
+      const maxMovementMs = challenge.max_capture_seconds * 1000;
       const scanStartedAt = performance.now();
-      while (firstQrAt === null || performance.now() - firstQrAt < 10_000) {
+      while (firstQrAt === null || (zoneProgress < targetCount && performance.now() - firstQrAt < maxMovementMs)) {
         if (!activeCameraStream || activeCameraStream.getTracks().some(track => track.readyState !== 'live')) throw new Error('Camera access ended during the challenge. Allow camera access and try again.');
         if (Date.now() >= Date.parse(challenge.expires_at)) throw new Error('The challenge expired before the first QR lock. Start a fresh QR + video check.');
         const cycleStartedAt = performance.now();
         context.drawImage($('preview'), 0, 0, canvas.width, canvas.height);
         const frame = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
         if (!frame) throw new Error('Could not prepare a camera frame. Check the camera and try again.');
-        const elapsed = Math.min(30_000, Math.round(performance.now() - scanStartedAt));
+        const elapsed = Math.min(60_000, Math.round(performance.now() - scanStartedAt));
         const response = await fetch(`/api/sessions/${session.id}/challenge/${challenge.id}/scan?elapsed_ms=${elapsed}`, {method:'POST',headers:{'Content-Type':'image/jpeg'},body:frame,cache:'no-store'});
         const result = await response.json();
         if (!response.ok) throw new Error(result.detail || `QR scan failed (${response.status}).`);
+        const faceInFrame = result.face_count > 0;
+        $('face-indicator').classList.toggle('face-ready', faceInFrame);
+        $('face-indicator').textContent = faceInFrame
+          ? `FACE IN FRAME · ${result.face_count} DETECTED`
+          : 'FACE REQUIRED · CENTER YOUR FACE';
         positionQrTracker(result);
+        if (result.zone_progress != null) zoneProgress = result.zone_progress;
         if (firstQrAt === null && result.payload) {
           firstQrAt = performance.now();
           ({recorder, completed: recordingCompleted} = beginVideoRecording(stream));
           videoRecordingActive = true;
           $('camera-select').disabled = true;
-          $('motion-overlay').classList.remove('hidden');
-          $('capture-mode').textContent = 'RECORDING · 10 SEC';
-          $('capture-status').textContent = 'QR LOCKED. Recording and face-video sampling have started; now move slowly through the figure eight while keeping the code facing the camera.';
+          $('capture-mode').textContent = 'RECORDING · BOX 1/6';
+          $('capture-status').textContent = 'QR LOCKED IN BOX 1. Recording and AI frame screening have started; move the QR through the numbered boxes in order.';
         }
         if (firstQrAt !== null) {
-          const remainingSeconds = Math.max(0, Math.ceil((10_000 - (performance.now() - firstQrAt)) / 1000));
-          $('capture-mode').textContent = `RECORDING · ${remainingSeconds} SEC`;
+          $('capture-mode').textContent = zoneProgress >= targetCount ? 'ALL BOXES SCANNED' : `RECORDING · BOX ${Math.min(zoneProgress + 1, targetCount)}/${targetCount}`;
+          $('capture-status').textContent = zoneProgress >= targetCount
+            ? 'All six square targets scanned. Stopping the complete movement recording for AI screening…'
+            : `QR path · ${zoneProgress} of ${targetCount} boxes reached. Move to box ${Math.min(zoneProgress + 1, targetCount)} and keep the QR visible.`;
+        }
+        if (!faceInFrame) {
+          $('capture-status').textContent = 'No face detected. Keep your face visible in the center; QR progress pauses until a face is back in frame.';
+        } else if (firstQrAt === null) {
+          $('capture-status').textContent = 'Face detected. Hold the QR steady in box 1 until the server shows QR LOCK.';
         }
         const remaining = 250 - (performance.now() - cycleStartedAt);
         if (remaining > 0) await new Promise(resolve => setTimeout(resolve, remaining));
       }
       if (!recorder || !recordingCompleted) throw new Error('The camera never locked onto a valid QR. Keep the code still and retry.');
+      if (zoneProgress < targetCount) {
+        $('capture-mode').textContent = 'TIME LIMIT REACHED';
+        $('capture-status').textContent = 'The 1-minute limit was reached. Stopping the recording for AI screening…';
+      }
       if (recorder.state !== 'inactive') recorder.stop();
       const recording = await recordingCompleted;
       videoRecordingActive = false;
@@ -768,19 +1293,28 @@
       $('exposure-compensation').disabled = true;
       $('camera-control-status').textContent = 'Camera stopped. Focus and exposure controls are available during a live scan.';
       $('qr-tracker').classList.add('hidden');
-      $('motion-overlay').classList.add('hidden');
+      $('target-zones').classList.add('hidden');
+      $('face-indicator').classList.add('hidden');
       $('preview').srcObject = null;
       $('preview').classList.add('hidden');
       $('viewer').classList.remove('streaming');
-      $('capture-status').textContent = 'Video recorded. Uploading the clip for in-memory frame sampling and AI face screening…';
+      $('capture-status').textContent = 'Complete movement recorded. Uploading the full clip for in-memory AI frame screening…';
+      adminOverrideObserved = false;
+      videoProcessingWatch = true;
+      videoUploadController = new AbortController();
+      monitorVideoOverride();
       const videoResult = await request(`/api/sessions/${session.id}/challenge/${challenge.id}/video`, {
         method: 'POST',
         body: recording.blob,
+        signal: videoUploadController.signal,
         headers: {
           'Content-Type': recording.blob.type || 'video/webm',
           'X-Video-Consent': 'true',
         },
       });
+      videoProcessingWatch = false;
+      videoUploadController = null;
+      if (adminOverrideObserved) return;
       challengeReady = false;
       $('capture-mode').textContent = 'VIDEO SCREENED';
       $('capture-status').textContent = `QR + video check complete · ${videoResult.frames_sampled} sampled frames, ${videoResult.frames_with_faces} with detected faces. ${videoResult.detail}`;
@@ -790,6 +1324,7 @@
       $('challenge').disabled = true;
       activateStage('voice');
     } catch (error) {
+      if (adminOverrideObserved) return;
       if (recorder && recorder.state !== 'inactive') {
         recorder.stop();
         if (recordingCompleted) await recordingCompleted;
@@ -807,12 +1342,15 @@
       $('preview').classList.add('hidden');
       $('viewer').classList.remove('streaming');
       $('qr-tracker').classList.add('hidden');
-      $('motion-overlay').classList.add('hidden');
+      $('target-zones').classList.add('hidden');
+      $('face-indicator').classList.add('hidden');
       $('capture-status').textContent = errorMessage(error);
       message(errorMessage(error));
       button.textContent = 'Retry QR + video check';
       button.disabled = !$('camera-consent').checked || !challengeReady;
     } finally {
+      videoProcessingWatch = false;
+      videoUploadController = null;
       captureRunning = false;
       $('tab-phone').disabled = false;
     }
@@ -871,7 +1409,7 @@
     }
   }
   function renderReport(report) {
-    const labels = {phone_pairing:'Phone pairing',phone_user_verification:'Phone user verification',randomized_qr_sequence:'Randomized QR sequence',phone_motion:'Phone movement',challenge_path_coherence:'Figure-eight path coherence',face_deepfake_analysis:'Live face/deepfake screening',video_temporal_consistency:'Cross-frame video consistency',speaker_verification:'Speaker identity match (not used)',random_phrase_verification:'Fresh phrase verification',audio_spoof_detection:'Audio anti-spoof screening',capture_quality:'Capture quality'};
+    const labels = {phone_pairing:'Phone pairing',phone_user_verification:'Phone user verification',randomized_qr_sequence:'Randomized QR sequence',phone_motion:'Phone movement',challenge_path_coherence:'Square target path',face_deepfake_analysis:'Live face/deepfake screening',video_temporal_consistency:'Cross-frame video consistency',video_screening_override:'Video override',speaker_verification:'Speaker identity match (not used)',random_phrase_verification:'Fresh phrase verification',audio_spoof_detection:'Audio anti-spoof screening',capture_quality:'Capture quality'};
     const reportElement = $('report');
     reportElement.replaceChildren();
     Object.entries(report.checks).forEach(([key, value]) => {

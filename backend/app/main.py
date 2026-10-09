@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hmac
 import hashlib
+import ipaddress
 import io
 import json
 import logging
@@ -48,6 +49,7 @@ from .audit_ledger import SimulatedAuditLedger
 from .screening import (
     analyze_video_frame,
     decode_video_frames,
+    detect_live_faces,
     summarize_video_frames,
     video_model_status,
     warm_video_model,
@@ -59,8 +61,19 @@ ROOT = Path(__file__).resolve().parent
 SESSION_TTL = timedelta(minutes=5)
 CHALLENGE_TTL = timedelta(minutes=4)
 CHALLENGE_STEPS = 6
-CHALLENGE_STEP_SECONDS = 1.5
-MAX_OBSERVATIONS = 120
+MAX_QR_CAPTURE_SECONDS = 60
+MAX_QR_CAPTURE_MS = MAX_QR_CAPTURE_SECONDS * 1000
+QR_TARGET_ZONES = (
+    (0.12, 0.22),
+    (0.12, 0.50),
+    (0.12, 0.78),
+    (0.88, 0.78),
+    (0.88, 0.50),
+    (0.88, 0.22),
+)
+QR_TARGET_TOLERANCE_X = 0.065
+QR_TARGET_TOLERANCE_Y = 0.09
+MAX_OBSERVATIONS = 200
 MAX_QR_FRAME_BYTES = 1_000_000
 MAX_VIDEO_BYTES = 25_000_000
 MAX_AUDIO_BYTES = 5_000_000
@@ -82,6 +95,11 @@ class ChallengeState:
     submitted: bool = False
     audio_submitted: bool = False
     video_submitted: bool = False
+    video_processing: bool = False
+    video_override_reason: str | None = None
+    video_override_at: datetime | None = None
+    square_zone_progress: int = 0
+    current_qr_step: int = 0
 
 
 @dataclass
@@ -120,6 +138,10 @@ class SessionView(BaseModel):
     phone_verified: bool
     created_at: datetime
     expires_at: datetime
+    video_processing: bool = False
+    video_submitted: bool = False
+    video_manually_skipped: bool = False
+    video_override_reason: str | None = None
 
 
 class ChallengeView(BaseModel):
@@ -128,8 +150,10 @@ class ChallengeView(BaseModel):
     created_at: datetime
     expires_at: datetime
     step_count: int = CHALLENGE_STEPS
-    step_seconds: float = CHALLENGE_STEP_SECONDS
-    motion_instruction: str = "Move the phone through a slow figure eight while showing its screen to the laptop camera."
+    current_qr_step: int
+    target_count: int = len(QR_TARGET_ZONES)
+    max_capture_seconds: int = MAX_QR_CAPTURE_SECONDS
+    motion_instruction: str = "Move the phone QR through the six numbered square targets in order."
 
 
 class PairRequest(BaseModel):
@@ -146,7 +170,7 @@ class PhoneDeviceRequest(BaseModel):
 
 class Observation(BaseModel):
     payload: str = Field(max_length=256)
-    elapsed_ms: int = Field(ge=0, le=30_000)
+    elapsed_ms: int = Field(ge=0, le=MAX_QR_CAPTURE_MS)
     x: float = Field(ge=0, le=1)
     y: float = Field(ge=0, le=1)
 
@@ -154,12 +178,14 @@ class Observation(BaseModel):
 class FrameScanResult(BaseModel):
     payload: str | None = None
     elapsed_ms: int
+    face_count: int = 0
     x: float | None = None
     y: float | None = None
     box_x: float | None = None
     box_y: float | None = None
     box_width: float | None = None
     box_height: float | None = None
+    zone_progress: int | None = None
 
 
 class WarmupRequest(BaseModel):
@@ -179,6 +205,11 @@ class AudioChallengeView(BaseModel):
 
 class EvidenceSubmission(BaseModel):
     challenge_id: UUID
+
+
+class AdminVideoOverrideRequest(BaseModel):
+    challenge_id: UUID
+    reason: str = Field(min_length=8, max_length=300)
 
 
 class CheckResult(BaseModel):
@@ -235,6 +266,8 @@ def _ensure_active(state: SessionState) -> None:
 
 
 def _clear_expired_evidence(state: SessionState) -> None:
+    if state.challenge is not None:
+        state.challenge.video_processing = False
     state.challenge = None
     state.video_frames = []
     state.server_observations = []
@@ -249,6 +282,7 @@ def _require_phone_token(state: SessionState, token: str | None) -> None:
 
 def _public_session(state: SessionState) -> SessionView:
     status = "expired" if utc_now() >= state.expires_at else "active"
+    challenge = state.challenge
     return SessionView(
         id=state.id,
         status=status,
@@ -257,6 +291,10 @@ def _public_session(state: SessionState) -> SessionView:
         phone_verified=state.phone_verified,
         created_at=state.created_at,
         expires_at=state.expires_at,
+        video_processing=bool(challenge and challenge.video_processing),
+        video_submitted=bool(challenge and challenge.video_submitted),
+        video_manually_skipped=bool(challenge and challenge.video_override_reason),
+        video_override_reason=challenge.video_override_reason if challenge else None,
     )
 
 
@@ -309,33 +347,66 @@ def _public_challenge(challenge: ChallengeState) -> ChallengeView:
         status=status,
         created_at=challenge.created_at,
         expires_at=challenge.expires_at,
+        current_qr_step=challenge.current_qr_step,
     )
 
 
 def _qr_png(payload: str) -> bytes:
-    image = qrcode.make(payload, box_size=8, border=2)
+    image = qrcode.make(payload, box_size=8, border=4)
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
     return buffer.getvalue()
 
 
-def _challenge_code_step(challenge: ChallengeState, payload: str, session_id: UUID) -> int | None:
+def _decode_qr_payload(frame: np.ndarray) -> tuple[str, np.ndarray | None]:
+    detector = cv2.QRCodeDetector()
+    payload, points, _ = detector.detectAndDecode(frame)
+    if payload:
+        return payload, points
+    detected_points = points
+
+    grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    enhanced = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)).apply(grayscale)
+    variants = [enhanced]
+    variants.append(cv2.adaptiveThreshold(
+        enhanced,
+        255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY,
+        31,
+        7,
+    ))
+    for variant in variants:
+        payload, points, _ = detector.detectAndDecode(variant)
+        if payload:
+            return payload, points
+        if detected_points is None and points is not None:
+            detected_points = points
+    return "", detected_points
+
+
+def _challenge_code_step(challenge: ChallengeState, payload: str) -> int | None:
     parts = payload.split("|")
-    if len(parts) != 5 or parts[0] != "FUSION26":
+    if len(parts) != 3 or parts[0] != "F26":
         return None
-    _, observed_session, observed_challenge, raw_step, code = parts
+    _, raw_step, code = parts
     try:
         step = int(raw_step)
     except ValueError:
         return None
     if (
-        observed_session != str(session_id)
-        or observed_challenge != str(challenge.id)
-        or not 0 <= step < len(challenge.codes)
+        not 0 <= step < len(challenge.codes)
         or not hmac.compare_digest(challenge.codes[step], code)
     ):
         return None
     return step
+
+
+def _advance_challenge_qr(challenge: ChallengeState, step: int) -> bool:
+    if not challenge.codes or step != challenge.current_qr_step:
+        return False
+    challenge.current_qr_step = (step + 1) % len(challenge.codes)
+    return True
 
 
 def _new_audio_phrase() -> str:
@@ -343,48 +414,104 @@ def _new_audio_phrase() -> str:
     return " ".join(secrets.choice(words) for _ in range(3))
 
 
-def _figure_eight_coherence(observations: list[Observation]) -> tuple[bool, str]:
-    path: list[tuple[float, float]] = []
+def _square_target_progress(observations: list[Observation]) -> tuple[int, str]:
+    progress = 0
     for observation in observations:
-        point = (observation.x, observation.y)
-        if not path or ((point[0] - path[-1][0]) ** 2 + (point[1] - path[-1][1]) ** 2) ** 0.5 >= 0.012:
-            path.append(point)
-    if len(path) < 8:
-        return False, "Too few distinct QR positions were captured to compare the figure-eight path."
+        if progress >= len(QR_TARGET_ZONES):
+            break
+        progress = _advance_square_target(progress, observation)
+    if progress == len(QR_TARGET_ZONES):
+        return progress, "The server observed the QR enter all six numbered square targets in order."
+    return progress, f"The server observed {progress} of {len(QR_TARGET_ZONES)} square targets in order."
 
-    xs = [point[0] for point in path]
-    ys = [point[1] for point in path]
-    span_x = max(xs) - min(xs)
-    span_y = max(ys) - min(ys)
-    if span_x < 0.12 or span_y < 0.10:
-        return False, "The QR path did not cover enough of both image axes for a figure-eight check."
 
-    center_x = (max(xs) + min(xs)) / 2
-    center_y = (max(ys) + min(ys)) / 2
-    left = right = upper = lower = False
-    quadrants: set[tuple[int, int]] = set()
-    center_crossings = 0
-    was_near_center = False
-    for x, y in path:
-        dx = (x - center_x) / (span_x / 2)
-        dy = (y - center_y) / (span_y / 2)
-        if abs(dx) <= 0.28 and abs(dy) <= 0.32:
-            if not was_near_center:
-                center_crossings += 1
-            was_near_center = True
-            continue
-        was_near_center = False
-        if abs(dx) > 0.18 and abs(dy) > 0.18:
-            quadrants.add((1 if dx > 0 else -1, 1 if dy > 0 else -1))
-        left = left or dx < -0.25
-        right = right or dx > 0.25
-        upper = upper or dy < -0.25
-        lower = lower or dy > 0.25
+def _advance_square_target(progress: int, observation: Observation) -> int:
+    if progress >= len(QR_TARGET_ZONES):
+        return progress
+    target_x, target_y = QR_TARGET_ZONES[progress]
+    if (
+        abs(observation.x - target_x) <= QR_TARGET_TOLERANCE_X
+        and abs(observation.y - target_y) <= QR_TARGET_TOLERANCE_Y
+    ):
+        return progress + 1
+    return progress
 
-    coherent = left and right and upper and lower and len(quadrants) >= 3 and center_crossings >= 2
-    if coherent:
-        return True, "The server-observed QR path crossed its center and visited both lobes across both image axes."
-    return False, "The observed QR path did not provide enough ordered crossings and lobe coverage to support a figure-eight check."
+
+def _is_direct_loopback_request(request: Request) -> bool:
+    if any(
+        header in request.headers
+        for header in (
+            "cf-connecting-ip",
+            "cf-ray",
+            "forwarded",
+            "true-client-ip",
+            "x-client-ip",
+            "x-cluster-client-ip",
+            "x-envoy-external-address",
+            "x-forwarded-for",
+            "x-forwarded-host",
+            "x-forwarded-port",
+            "x-forwarded-prefix",
+            "x-forwarded-proto",
+            "x-original-forwarded-for",
+            "x-real-ip",
+        )
+    ):
+        return False
+    client = request.client
+    if client is None:
+        return False
+    try:
+        return ipaddress.ip_address(client.host).is_loopback
+    except ValueError:
+        return False
+
+
+def _qa_controls_enabled(request: Request) -> bool:
+    return (
+        os.getenv("APP_ENV", "development").strip().lower() not in {"prod", "production"}
+        and os.getenv("ENABLE_QA_CONTROLS", "").strip().lower() == "true"
+        and _is_direct_loopback_request(request)
+    )
+
+
+def _admin_controls_enabled() -> bool:
+    return (
+        os.getenv("APP_ENV", "development").strip().lower() not in {"prod", "production"}
+        and os.getenv("ENABLE_ADMIN_CONTROLS", "").strip().lower() == "true"
+    )
+
+
+def _require_admin_access(request: Request) -> None:
+    if not _admin_controls_enabled():
+        raise HTTPException(status_code=404, detail="Not found")
+    if not _is_direct_loopback_request(request):
+        raise HTTPException(status_code=404, detail="Not found")
+
+
+def _admin_session_view(state: SessionState) -> dict[str, Any]:
+    challenge = state.challenge
+    return {
+        "id": str(state.id),
+        "status": "expired" if utc_now() >= state.expires_at else "active",
+        "paired": state.paired,
+        "phone_verified": state.phone_verified,
+        "created_at": state.created_at.isoformat(),
+        "expires_at": state.expires_at.isoformat(),
+        "challenge_id": str(challenge.id) if challenge else None,
+        "challenge_status": (
+            "submitted" if challenge.submitted
+            else "expired" if utc_now() >= challenge.expires_at
+            else "active"
+        ) if challenge else None,
+        "qr_targets_reached": challenge.square_zone_progress if challenge else 0,
+        "video_processing": bool(challenge and challenge.video_processing),
+        "video_submitted": bool(challenge and challenge.video_submitted),
+        "video_manually_skipped": bool(challenge and challenge.video_override_reason),
+        "video_override_reason": challenge.video_override_reason if challenge else None,
+        "video_override_at": challenge.video_override_at.isoformat() if challenge and challenge.video_override_at else None,
+        "report_ready": state.result is not None,
+    }
 
 
 @app.get("/", include_in_schema=False)
@@ -392,9 +519,88 @@ def home() -> FileResponse:
     return FileResponse(ROOT / "static" / "index.html")
 
 
-@app.get("/motion-guide.svg", include_in_schema=False)
-def motion_guide() -> FileResponse:
-    return FileResponse(ROOT / "static" / "figure-eight.svg", media_type="image/svg+xml")
+@app.get("/qr-zones.svg", include_in_schema=False)
+def qr_zones_guide() -> FileResponse:
+    return FileResponse(ROOT / "static" / "qr-zones.svg", media_type="image/svg+xml")
+
+
+@app.get("/assets/hdfc-hero.jpg", include_in_schema=False)
+def hdfc_hero_photo() -> FileResponse:
+    return FileResponse(ROOT / "static" / "assets" / "hdfc-hero.jpg", media_type="image/jpeg")
+
+
+@app.get("/assets/icici-hero.jpg", include_in_schema=False)
+def icici_hero_photo() -> FileResponse:
+    return FileResponse(ROOT / "static" / "assets" / "icici-hero.jpg", media_type="image/jpeg")
+
+
+@app.get("/assets/brands/hdfc-bank.svg", include_in_schema=False)
+def hdfc_bank_logo() -> FileResponse:
+    return FileResponse(ROOT / "static" / "assets" / "brands" / "hdfc-bank.svg", media_type="image/svg+xml")
+
+
+@app.get("/assets/brands/icici-bank.svg", include_in_schema=False)
+def icici_bank_logo() -> FileResponse:
+    return FileResponse(ROOT / "static" / "assets" / "brands" / "icici-bank.svg", media_type="image/svg+xml")
+
+
+@app.get("/hidden/control", include_in_schema=False)
+def hidden_qa_control(request: Request) -> FileResponse:
+    if not _qa_controls_enabled(request):
+        raise HTTPException(status_code=404, detail="Not found")
+    return FileResponse(ROOT / "static" / "qa-control.html", headers={"Cache-Control": "no-store"})
+
+
+@app.get("/admin", include_in_schema=False)
+def admin_dashboard(request: Request) -> FileResponse:
+    _require_admin_access(request)
+    return FileResponse(ROOT / "static" / "admin.html", headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/admin/sessions", include_in_schema=False)
+def admin_sessions(request: Request) -> dict[str, Any]:
+    _require_admin_access(request)
+    sessions = sorted(_sessions.values(), key=lambda state: state.created_at, reverse=True)
+    return {"sessions": [_admin_session_view(state) for state in sessions[:100]]}
+
+
+@app.post("/api/admin/sessions/{session_id}/skip-video", include_in_schema=False)
+def admin_skip_video(
+    session_id: UUID,
+    body: AdminVideoOverrideRequest,
+    request: Request,
+) -> dict[str, Any]:
+    _require_admin_access(request)
+    state = _session(session_id)
+    _ensure_active(state)
+    challenge = state.challenge
+    if challenge is None or challenge.id != body.challenge_id:
+        raise HTTPException(status_code=404, detail="Challenge not found for this session")
+    if not state.phone_verified:
+        raise HTTPException(status_code=409, detail="Phone verification is required before overriding video processing")
+    if challenge.submitted:
+        raise HTTPException(status_code=409, detail="The challenge report has already been submitted")
+    if challenge.video_submitted:
+        raise HTTPException(status_code=409, detail="Video processing has already completed")
+    if not challenge.video_processing:
+        raise HTTPException(status_code=409, detail="Video processing is not currently marked as in progress")
+    reason = body.reason.strip()
+    if not reason:
+        raise HTTPException(status_code=422, detail="Enter a brief reason for the manual override")
+
+    challenge.video_override_reason = reason
+    challenge.video_override_at = utc_now()
+    challenge.video_processing = False
+    challenge.video_submitted = True
+    state.video_frames = []
+    return _admin_session_view(state)
+
+
+@app.get("/api/qa/status", include_in_schema=False)
+def qa_status(request: Request) -> dict[str, bool]:
+    if not _qa_controls_enabled(request):
+        raise HTTPException(status_code=404, detail="Not found")
+    return {"enabled": True}
 
 
 @app.get("/phone/{session_id}", include_in_schema=False)
@@ -667,7 +873,7 @@ def challenge_qr(
         raise HTTPException(status_code=410, detail="Challenge expired or unavailable")
     if not 0 <= step < len(challenge.codes):
         raise HTTPException(status_code=404, detail="Challenge step not found")
-    payload = f"FUSION26|{session_id}|{challenge_id}|{step}|{challenge.codes[step]}"
+    payload = f"F26|{step}|{challenge.codes[step]}"
     return Response(_qr_png(payload), media_type="image/png", headers={"Cache-Control": "no-store"})
 
 
@@ -794,6 +1000,7 @@ async def submit_video(
     if content_type not in accepted_types:
         raise HTTPException(status_code=415, detail="Video must be submitted as WebM, MP4, or QuickTime")
 
+    challenge.video_processing = True
     chunks: list[bytes] = []
     size = 0
     async for chunk in request.stream():
@@ -822,8 +1029,19 @@ async def submit_video(
             }
         video_frames.append({"elapsed_ms": elapsed_ms, **analysis})
 
+    if challenge.video_override_reason is not None:
+        challenge.video_processing = False
+        return VideoSubmissionResult(
+            frames_sampled=0,
+            frames_with_faces=0,
+            median_fake_score=None,
+            score_range=None,
+            detail="An administrator skipped video screening while processing was in progress; analysis results were discarded.",
+        )
+
     state.video_frames = video_frames
     challenge.video_submitted = True
+    challenge.video_processing = False
     summary = summarize_video_frames(video_frames)
     return VideoSubmissionResult(
         frames_sampled=summary["frames_sampled"],
@@ -843,7 +1061,7 @@ async def scan_challenge_frame(
     session_id: UUID,
     challenge_id: UUID,
     request: Request,
-    elapsed_ms: Annotated[int, Query(ge=0, le=30_000)],
+    elapsed_ms: Annotated[int, Query(ge=0, le=MAX_QR_CAPTURE_MS)],
 ) -> FrameScanResult:
     state = _session(session_id)
     _ensure_active(state)
@@ -867,38 +1085,64 @@ async def scan_challenge_frame(
     if image is None:
         raise HTTPException(status_code=400, detail="QR scan frame is not a valid image")
 
+    try:
+        faces = detect_live_faces(image)
+    except RuntimeError as error:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Live face detection is unavailable: {error}",
+        ) from error
+
     server_elapsed_ms = max(0, int((utc_now() - challenge.created_at).total_seconds() * 1000))
-    payload, points, _ = cv2.QRCodeDetector().detectAndDecode(image)
+    payload, points = _decode_qr_payload(image)
     if points is None:
-        return FrameScanResult(elapsed_ms=elapsed_ms)
+        return FrameScanResult(elapsed_ms=elapsed_ms, face_count=len(faces))
 
     height, width = image.shape[:2]
     corners = points[0]
     left, top = corners.min(axis=0)
     right, bottom = corners.max(axis=0)
     center_x, center_y = corners.mean(axis=0)
-    step = _challenge_code_step(challenge, payload, session_id) if payload else None
-    if step is not None and server_elapsed_ms - state.last_qr_path_sample_ms >= QR_PATH_SAMPLE_INTERVAL_MS:
+    step = _challenge_code_step(challenge, payload) if payload else None
+    is_current_step = step is not None and step == challenge.current_qr_step
+    sampled_current_qr = (
+        bool(faces)
+        and is_current_step
+        and server_elapsed_ms - state.last_qr_path_sample_ms >= QR_PATH_SAMPLE_INTERVAL_MS
+    )
+    if sampled_current_qr:
         state.last_qr_path_sample_ms = server_elapsed_ms
         if state.server_observations is None:
             state.server_observations = []
         state.server_observations.append(Observation(
             payload=payload,
-            elapsed_ms=min(server_elapsed_ms, 30_000),
+            elapsed_ms=min(server_elapsed_ms, MAX_QR_CAPTURE_MS),
             x=float(np.clip(center_x / width, 0, 1)),
             y=float(np.clip(center_y / height, 0, 1)),
         ))
         if len(state.server_observations) > MAX_OBSERVATIONS:
             state.server_observations = state.server_observations[-MAX_OBSERVATIONS:]
+        challenge.square_zone_progress = _advance_square_target(
+            challenge.square_zone_progress,
+            state.server_observations[-1],
+        )
+    qr_scanned = bool(
+        sampled_current_qr
+        and challenge.square_zone_progress > 0
+        and step is not None
+        and _advance_challenge_qr(challenge, step)
+    )
     return FrameScanResult(
-        payload=payload if step is not None else None,
+        payload=payload if qr_scanned else None,
         elapsed_ms=elapsed_ms,
+        face_count=len(faces),
         x=float(np.clip(center_x / width, 0, 1)),
         y=float(np.clip(center_y / height, 0, 1)),
         box_x=float(np.clip(left / width, 0, 1)),
         box_y=float(np.clip(top / height, 0, 1)),
         box_width=float(np.clip((right - left) / width, 0, 1)),
         box_height=float(np.clip((bottom - top) / height, 0, 1)),
+        zone_progress=challenge.square_zone_progress,
     )
 
 
@@ -922,7 +1166,7 @@ def submit_evidence(session_id: UUID, body: EvidenceSubmission) -> VerificationR
     matched_steps: list[int] = []
     step_positions: dict[int, Observation] = {}
     for observation in observations:
-        step = _challenge_code_step(challenge, observation.payload, session_id)
+        step = _challenge_code_step(challenge, observation.payload)
         if step is None:
             continue
         if not matched_steps:
@@ -940,16 +1184,23 @@ def submit_evidence(session_id: UUID, body: EvidenceSubmission) -> VerificationR
         else 0
     )
     qr_passed = len(matched_steps) == CHALLENGE_STEPS and server_capture_duration_ms >= 4_000
-    path_coherent, path_detail = _figure_eight_coherence(observations)
-    path_moved = (
-        bool(observations)
-        and max(item.x for item in observations) - min(item.x for item in observations) >= 0.12
-        and max(item.y for item in observations) - min(item.y for item in observations) >= 0.10
-    )
+    path_progress = challenge.square_zone_progress
+    if path_progress == len(QR_TARGET_ZONES):
+        path_detail = "The server observed the QR enter all six numbered square targets in order."
+    else:
+        path_detail = f"The server observed {path_progress} of {len(QR_TARGET_ZONES)} square targets in order."
+    path_coherent = path_progress == len(QR_TARGET_ZONES)
     challenge.submitted = True
 
     video_summary = summarize_video_frames(state.video_frames or [])
-    if video_summary["frames_with_faces"] >= 3:
+    if challenge.video_override_reason is not None:
+        override_detail = (
+            "Video screening was manually skipped by an administrator. "
+            f"Reason: {challenge.video_override_reason} No video was analyzed; this is not a passed check."
+        )
+        face_check = CheckResult(status="unavailable", detail=override_detail)
+        temporal_check = CheckResult(status="unavailable", detail=override_detail)
+    elif video_summary["frames_with_faces"] >= 3:
         frame_refs = ", ".join(
             "{}ms={}".format(item["elapsed_ms"], item["fake_score"])
             for item in video_summary["frame_evidence"][:4]
@@ -1020,6 +1271,15 @@ def submit_evidence(session_id: UUID, body: EvidenceSubmission) -> VerificationR
     checks = {
         "phone_pairing": CheckResult(status="passed", detail="The session-specific pairing token was accepted."),
         "phone_user_verification": CheckResult(status="passed", detail="The phone platform authenticator verified the user and signed a fresh server challenge."),
+        "live_face_presence": CheckResult(
+            status="passed" if observations else "failed",
+            detail=(
+                f"The live detector found at least one face in each of {len(observations)} QR observations accepted for this challenge. "
+                "This is a presence gate only; no face identity or match is inferred."
+                if observations
+                else "No QR observations were accepted with a face present. Face presence is not identity verification."
+            ),
+        ),
         "randomized_qr_sequence": CheckResult(
             status="passed" if qr_passed else "failed",
             detail=(
@@ -1028,19 +1288,33 @@ def submit_evidence(session_id: UUID, body: EvidenceSubmission) -> VerificationR
             ),
         ),
         "phone_motion": CheckResult(
-            status="passed" if qr_passed and path_moved else "review",
+            status="passed" if path_coherent else "review",
             detail=(
-                "The server-observed QR path varied across both image axes."
-                if path_moved
-                else "The server did not observe enough QR movement across both image axes."
+                "The server observed the QR in all six square targets in order."
+                if path_coherent
+                else f"The server observed {path_progress} of {len(QR_TARGET_ZONES)} square targets in order."
             ),
         ),
         "challenge_path_coherence": CheckResult(
-            status="passed" if qr_passed and path_coherent else "review",
+            status="passed" if path_coherent else "failed",
             detail=path_detail,
         ),
         "face_deepfake_analysis": face_check,
         "video_temporal_consistency": temporal_check,
+        **(
+            {
+                "video_screening_override": CheckResult(
+                    status="unavailable",
+                    detail=(
+                        "Video screening was manually skipped by an administrator. "
+                        f"Reason: {challenge.video_override_reason} "
+                        f"Override recorded at {challenge.video_override_at.isoformat() if challenge.video_override_at else 'unknown time'}."
+                    ),
+                )
+            }
+            if challenge.video_override_reason is not None
+            else {}
+        ),
         "speaker_verification": CheckResult(
             status="unavailable",
             detail="Not performed by design; speaker enrollment and identity matching are out of scope.",
@@ -1048,14 +1322,31 @@ def submit_evidence(session_id: UUID, body: EvidenceSubmission) -> VerificationR
         "random_phrase_verification": phrase_check,
         "audio_spoof_detection": audio_spoof_check,
         "capture_quality": CheckResult(
-            status="review" if server_capture_duration_ms < 4_000 else "passed",
+            status=(
+                "unavailable" if challenge.video_override_reason is not None
+                else "review" if server_capture_duration_ms < 4_000
+                else "passed"
+            ),
             detail=(
-                f"AI-screened {len(state.video_frames or [])} sampled frames from the recorded QR video and "
-                f"{len(observations)} valid QR path observations over {server_capture_duration_ms} ms."
+                (
+                    "Video screening was manually skipped by an administrator; "
+                    "no recorded-video quality result is available. "
+                    if challenge.video_override_reason is not None
+                    else f"AI-screened {len(state.video_frames or [])} sampled frames from the complete recorded QR movement and "
+                )
+                + (
+                    f"{len(observations)} valid QR path observations; {challenge.square_zone_progress} of "
+                    f"{len(QR_TARGET_ZONES)} square targets were reached."
+                )
             ),
         ),
     }
-    decision = "review" if qr_passed else "challenge_failed"
+    challenge_passed = qr_passed and path_coherent
+    decision = (
+        "inconclusive"
+        if challenge.video_override_reason is not None
+        else "review" if challenge_passed else "challenge_failed"
+    )
     generated_at = utc_now()
     audit_payload = {
         "decision": decision,
@@ -1074,6 +1365,11 @@ def submit_evidence(session_id: UUID, body: EvidenceSubmission) -> VerificationR
             "Phone user verification proves use of the paired platform credential; it does not identify the camera subject or establish civil identity.",
             "Image and audio classifier scores are research signals, can be wrong or drift, and are never an identity match or an automatic decision.",
             "Temporal video analysis compares sampled face presence and image-classifier score variation; it is not a trained temporal authenticity model.",
+            *(
+                ["Recorded video screening was manually skipped by an administrator; the skipped step is unavailable, not a pass."]
+                if challenge.video_override_reason is not None
+                else []
+            ),
             "The audit log is an in-memory hash-chain simulator, not a real blockchain; only evidence hashes and chain metadata are recorded.",
             "Audio is processed in memory only after the explicit microphone-consent step; no raw audio is retained.",
             "Session state is in memory and resets when the API restarts.",

@@ -8,7 +8,7 @@ The refreshed pages use a restrained editorial hierarchy, consistent spacing, cl
 
 ## What the prototype is intended to demonstrate
 
-The brief asks for a short-clip real-versus-synthetic face check that can work without a previously enrolled face, explain evidence behind its result, and fit into a mock onboarding flow. The selected supporting checks are a phone platform-authenticator proof and a changing QR challenge that the laptop camera scans while the phone moves in a figure eight.
+The brief asks for a short-clip real-versus-synthetic face check that can work without a previously enrolled face, explain evidence behind its result, and fit into a mock onboarding flow. The selected supporting checks are a phone platform-authenticator proof and a compact QR challenge that the laptop camera scans while a face remains visible and the phone moves through six perimeter targets clear of the centered face area.
 
 The supporting checks are not the deepfake detector. Phone biometric or device-PIN verification only authorizes a phone credential locally; it does not prove who appears in the laptop video. The prototype records a short camera clip during the QR challenge, samples detected face crops from that clip, and runs a pinned image classifier. It is not a trained temporal model, is not calibrated, and does not localize the physical artifact behind a score.
 
@@ -19,8 +19,8 @@ The supporting checks are not the deepfake detector. Phone biometric or device-P
 3. **Local web app:** FastAPI serves the API and the laptop and phone web pages. Uvicorn runs the server. Session state is currently held in memory and expires after five minutes.
 4. **Pair the phone:** The laptop creates a session-specific pairing QR. Scanning it opens the phone page on the same random HTTPS hostname and associates that phone browser with the current session.
 5. **Verify the phone locally:** WebAuthn creates or uses a platform credential. The phone OS requests local user verification (biometric or device passcode, depending on device policy); the API validates the signed challenge and retains the public credential in memory. The biometric itself is not sent to the API.
-6. **Run the live QR + video check:** The phone cycles six random, session-bound QR signals. The user first holds the phone QR close and still in the laptop camera until it recognizes a valid signal and lets focus/exposure settle; only then does the ten-second video recording begin. The user follows the on-screen figure-eight guide while keeping the QR facing the camera. OpenCV decodes separate downscaled preview frames for QR identity/path. With explicit consent, the recorded clip is sent after capture and sampled about once per second for face detection and classification. The clip, extracted frames, and face crops are processed in memory and discarded after analysis; derived score evidence remains in session memory.
-7. **Run optional voice screening:** A separate Voice tab gives its own directions and consent. After the user explicitly starts, the browser records up to eight seconds of a fresh random phrase. Whisper tiny.en checks the phrase and the audio classifier gives a research anti-spoof signal. Audio is processed in memory and discarded. Voice may be skipped.
+6. **Run the live QR + video check:** The phone holds each compact random QR signal until the laptop detects both the current code and a face in frame. The user first holds the phone QR still in perimeter box 1 until the laptop shows FACE IN FRAME and QR LOCK; recording then continues through all six edge boxes, up to 30 seconds. OpenCV decodes separate downscaled preview frames and checks target order. With explicit consent, the complete clip is sent after capture and sampled every half-second, including the last frame, for face detection and classification. The clip, extracted frames, and face crops are processed in memory and discarded after analysis; derived score evidence remains in session memory.
+7. **Run optional voice screening:** A separate Voice tab gives its own directions and consent. After the user explicitly starts, the browser displays a live waveform and records up to eight seconds of a fresh random phrase. Whisper tiny.en checks the phrase and the audio classifier gives a research anti-spoof signal. Audio is processed in memory and discarded. Voice may be skipped.
 8. **Show the evidence report:** The Report tab displays the overall **Review** or **Challenge failed** result and keeps phone verification, QR sequence/movement, recorded-video face screening, and optional audio checks separate. A QR pass is not a verified identity decision.
 
 ## Technology map
@@ -32,16 +32,17 @@ The supporting checks are not the deepfake detector. Phone biometric or device-P
 | Uvicorn | Runs the local ASGI web server | In use |
 | HTML, CSS, JavaScript | Gated Phone, QR + video, Voice, and Report tabs; phone QR/authenticator page | In use |
 | OpenCV QRCodeDetector | Decodes QR codes and positions from downscaled camera preview frames | In use; preview frames are processed in memory by the API and not saved |
-| PyAV | Decodes the consented ten-second browser recording into in-memory samples for face analysis | In use; the clip is discarded after analysis |
+| PyAV | Decodes the consented full target-path recording into in-memory samples for face analysis | In use; samples every half-second through the final frame, then discards the clip |
 | WebAuthn (`webauthn` Python package + browser credentials API) | Registers a phone platform credential and verifies fresh signed challenges after local user verification | In use; cross-device use needs HTTPS |
-| `qrcode` + Pillow | Produces pairing and rotating challenge QR images | In use |
+| `qrcode` + Pillow | Produces pairing and scan-acknowledged challenge QR images | In use |
 | `requirements.txt` + `.venv` | Pins compatible dependency ranges and isolates the team's Python packages | In use |
 | `CheckRequirements.bat` | Checks Python 3.11, dependency consistency, and required imports | In use |
 | Cloudflare `cloudflared` Quick Tunnel | Gives the phone and laptop a shared random HTTPS URL without requiring the same Wi-Fi | Started for each demo run; closes with launcher |
 | `backend/run_tunnel.py` | Starts the tunnel and API, sets the WebAuthn origin, waits for HTTPS health, and supervises process cleanup | In use |
+| `/hidden/control` | Development-only, UI-only stage simulation control; disabled by default and inaccessible through forwarded/tunnel requests | Available only with explicit local opt-in |
 | Windows Job Object | Terminates both child processes if the launcher exits, including when its console is closed | Required by launcher before any tunnel is opened |
 | `StartPrototype.bat` | Checks setup and starts the managed public demo | In use |
-| MediaPipe Tasks | Detects faces in sampled live frames | In use; detector regions feed the face-crop classifier |
+| MediaPipe Tasks | Gates QR steps on live face presence and detects faces in sampled video | In use; presence does not identify a person; detector regions also feed the face-crop classifier |
 | PyTorch + Transformers | Runs the pinned face-crop classifier and optional audio anti-spoof classifier | Wired; model evaluation and calibration remain pending |
 | faster-whisper | Transcribes the fresh phrase in the optional voice flow | Wired; does not identify or match a speaker |
 | Hash-chain simulator | Records a digest of the report and chain metadata in memory | In use; not a real or persistent blockchain |
@@ -61,8 +62,8 @@ The supporting checks are not the deepfake detector. Phone biometric or device-P
 
 3. Double-click `StartPrototype.bat` (or run it from PowerShell). On first run it downloads Cloudflare's Windows tunnel binary to the ignored `.tools` folder and verifies its SHA256 against the official release metadata. It then launches a temporary HTTPS address and the API, verifies local API health and a registered Cloudflare connection, and opens the browser. If this computer cannot reach the public URL for its own health check, the launcher warns and leaves the user able to test the URL from the browser or phone.
 4. Open the generated address on the laptop. Scan the session QR with the phone, even if the devices use different networks.
-5. Complete local phone verification, open **QR + video**, consent, and hold the phone QR 15–20 cm from the laptop camera until the first valid QR locks. Only then does the ten-second recording start; follow the downloadable on-screen figure-eight guide slowly. The clip is sampled in memory for face screening and discarded.
-6. Open **Voice** for the separately consented optional phrase recording, or skip it. Review the **Report** tab as a prototype signal only; it does not make a KYC decision.
+5. Complete local phone verification, open **QR + video**, consent, and hold the phone QR in box 1 about 15–20 cm from the laptop camera until the first valid QR locks. Follow the numbered square targets; the full movement is recorded up to 30 seconds and sampled through the final frame for face screening, then discarded.
+6. Open **Voice** for the separately consented optional phrase recording and live waveform, or skip it. Review the **Report** tab as a prototype signal only; it does not make a KYC decision.
 7. Press Ctrl+C or close the launcher console to stop both the API and tunnel. The random address is temporary and stops serving this project after the connector exits.
 
 ## Device and security notes
@@ -72,7 +73,7 @@ The supporting checks are not the deepfake detector. Phone biometric or device-P
 - A Quick Tunnel is public while active. The hostname is random, but it is not an access-control policy. Keep the launcher open only for the demo and do not submit real identity data. The launcher requires a Windows Job Object and refuses to start if it cannot guarantee child-process cleanup.
 - Cloudflare Quick Tunnels are temporary testing tunnels without a production availability guarantee. Use a named tunnel and appropriate access controls for a persistent deployment.
 - Session and credential records are in memory and reset when the API stops. QR codes are decoded server-side from submitted frames, but a modified client could still submit fabricated frames or video.
-- With explicit camera consent, the browser uploads the ten-second recording after QR lock; the API samples it in memory for face screening and discards the clip. Separate downscaled camera stills are sent for QR decoding and position measurement. Optional microphone audio is captured only after its own consent and explicit user action, processed in memory, and discarded. Derived report evidence remains in session memory until expiry.
+- With explicit camera consent, the browser uploads the complete QR target-path recording after box 6; the API samples it in memory for face screening and discards the clip. Separate downscaled camera stills are sent for QR decoding and ordered target measurement. Optional microphone audio is captured only after its own consent and explicit user action, shown as a live waveform, processed in memory, and discarded. Derived report evidence remains in session memory until expiry.
 
 ## Next development itinerary
 

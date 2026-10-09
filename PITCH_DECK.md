@@ -2,16 +2,16 @@
 
 > **Editable pitch draft.** Replace bracketed text with team-specific details. No performance numbers are claimed until measured.
 
-> **Prototype update (2026-10-09):** The current build has session-bound QR pairing/challenge and a WebAuthn phone platform-authenticator flow that requires user verification and verifies the assertion server-side. The physical phone ceremony still needs an HTTPS device run. The short-clip face classifier is not integrated, so the demo must keep its result at Review.
+> **Prototype update (2026-10-09):** The current build wires a live face-crop classifier into the laptop's QR capture window, plus server-measured QR sequence/path checks, server-verified WebAuthn phone proof, optional consented phrase/audio screening, and a hash-only in-memory audit simulator. Model evaluation/calibration and physical-device testing remain open. A completed challenge remains Review; an incomplete required QR sequence fails.
 
-> **Challenge alignment:** Mastercard CSB-02 asks for lightweight real-versus-synthetic detection on a short KYC clip without a prior real-person baseline, an explanation of the artifacts behind the score, and a mock onboarding demo. The selected direction is a laptop + phone flow: classifier first; phone biometric-authorized signing and figure-eight QR as supporting signals.
+> **Challenge alignment:** Mastercard CSB-02 asks for lightweight real-versus-synthetic detection on a short KYC clip without a prior real-person baseline, an explanation of the artifacts behind the score, and a mock onboarding demo. The selected direction is a laptop + phone flow: classifier first; phone biometric-authorized signing and ordered square-target QR as supporting signals.
 
 ## Slide 1 — Title
 
 **Deepfake-Resistant Identity Verification for Digital Onboarding**
 Team: **[team name]** · Challenge/track: **[confirm official wording]** · Institution: **[fill in]**
 
-**One-line pitch:** Score a short webcam clip for real-versus-synthetic face likelihood, show evidence behind the score, and strengthen the mock onboarding flow with phone-authenticator user verification and a fresh figure-eight QR challenge.
+**One-line pitch:** Screen sampled face crops during a live onboarding challenge, show timestamped frame/region evidence, and pair it with phone-authenticator verification and a fresh, ordered square-target QR challenge.
 
 ## Slide 2 — Problem statement
 
@@ -26,21 +26,21 @@ Team: **[team name]** · Challenge/track: **[confirm official wording]** · Inst
 
 An explainable onboarding workflow with one primary detector and two supporting phone signals:
 
-1. Capture a short webcam clip on the laptop and score sampled face frames with a lightweight real-versus-synthetic classifier.
-2. Explain the output with inspectable frame/region evidence; aggregate into a clip-level likelihood and show uncertainty/quality limits.
-3. Pair a phone and display a fresh, expiring QR sequence while the user traces a slow figure eight for replay-resistant motion evidence.
+1. During the complete QR movement recording (up to 30 seconds), score detected face crops sampled from the first through final frames with a pinned real-versus-synthetic image classifier.
+2. Show timestamped face-region scores and a summary; the current image model does not localize artifacts or provide a trained temporal-video judgment.
+3. Pair a phone and display a fresh, expiring QR sequence while the user moves through six square targets in order for replay-resistant motion evidence.
 4. Ask the phone's platform authenticator to perform local user verification and authorize a signature over a fresh server challenge.
-5. Return **Review** or **Inconclusive** when evidence is weak, with separate outputs for classifier, QR motion, phone signature, and capture quality.
+5. Show separate outputs for classifier, QR motion, phone signature, optional voice checks, and capture quality. The current prototype returns **Review** when the required QR sequence completes and **Challenge failed** otherwise.
 
 **Key distinction:** Phone local user verification authorizes use of a platform credential; biometric data stays local. The platform may allow a device PIN/passcode as a fallback, so the server does not claim it knows which local method was used. This does not identify the camera subject or prove the video is genuine. QR motion is anti-replay evidence, not a deepfake detector. The face classifier is the core challenge deliverable.
 
 ## Slide 4 — User journey and system flow
 
-`Consent → Create session → Pair phone → Sign fresh challenge locally → Capture short webcam clip + scan moving QR → Explain per-signal evidence → Review / Inconclusive / (Pass only after validation)`
+`Consent → Create session → Pair phone → Verify locally → Capture live face samples + scan moving QR → Optional consented voice phrase → Show separate evidence → Review / Challenge failed`
 
 **Diagram placeholder:** [Add flow diagram with browser, mobile app, API, model services, database, and trust boundaries.]
 
-**Device choice:** hybrid. Laptop/browser handles onboarding, webcam capture, classifier, and results. Phone displays the changing QR and locally authorizes signing a one-time challenge. QR and WebAuthn phone proof are now implemented; the short-clip classifier is next.
+**Device choice:** hybrid. Laptop/browser handles onboarding, webcam capture, screening, and results. Phone displays the changing QR and locally authorizes signing a one-time challenge. The QR, WebAuthn, live image-classifier, optional audio, and hash-simulator paths are wired; physical-device testing and model evaluation remain open.
 
 ## Slide 5 — Technology approach
 
@@ -49,10 +49,10 @@ An explainable onboarding workflow with one primary detector and two supporting 
 | Web | Current prototype: static HTML/CSS/JavaScript served by FastAPI | Pairing, short-clip capture UI, progress, evidence report |
 | API/orchestration | FastAPI + server-side WebAuthn assertion verification | Session state and separated verification contract |
 | Phone | WebAuthn platform credential with `userVerification: required` | Challenge-bound signature; local biometric/device unlock stays on phone |
-| QR motion | Existing rotating six-code QR plus figure-eight camera path | Sequence, expiry, replay, and observed movement evidence |
-| Face video | OpenCV/MediaPipe preprocessing plus a selected pretrained classifier | Clip likelihood and inspectable model evidence |
-| Voice | Deferred from first implementation | No voice-match or audio anti-spoof claims |
-| Data/security | PostgreSQL/Supabase if selected; backend-only secrets; access policies | Minimal session metadata and protected results |
+| QR motion | Rotating six-code QR plus six ordered square camera targets | Sequence, expiry, replay, and observed target-entry evidence |
+| Face video | MediaPipe face detection plus a pinned pretrained image classifier, sampled during QR capture | Timestamped face-crop scores; not a trained temporal model |
+| Voice | Optional, separate consent; fresh phrase transcription plus a pinned audio anti-spoof classifier | Phrase match and uncalibrated screening signal; no speaker identity match |
+| Data/security | In-memory session state, public credential data, and hash-only simulated audit chain | No persistent database or real blockchain is integrated |
 | Runtime | Git + Python 3.11 virtual environment + `requirements.txt`; Docker optional | Teammates can install and run the same API locally |
 
 **Enrollment decision:** A custom reference-face comparison is distinct from phone OS biometrics. Supabase can store an authorized reference image or embedding, but it does not compare faces; a backend matcher is required. Keep this feature out of the first build unless the challenge requires it. If included, obtain explicit consent, minimize/expire stored data, restrict it to backend-only access, and evaluate false matches and false non-matches. Never imply that the phone biometric proves the laptop-camera subject is the registered person.
@@ -60,15 +60,14 @@ An explainable onboarding workflow with one primary detector and two supporting 
 ## Slide 6 — Decision logic and explainability
 
 - Use explicit rules for cryptographic proof, expiry, and replay; do not average away critical failures.
-- Keep signal outputs separate: face classifier, phone user-verification proof, QR sequence/motion, and capture quality. Speaker and audio anti-spoof checks are deferred.
-- **Pass:** required checks satisfy validated thresholds.
-- **Review:** meaningful risk signal or conflicting evidence; request human review or a fresh challenge.
-- **Inconclusive:** insufficient/poor-quality evidence; ask for recapture.
+- Keep signal outputs separate: face classifier, phone user-verification proof, QR sequence/motion, capture quality, optional phrase match, and optional audio anti-spoof screening. Speaker identity matching is intentionally out of scope.
+- **Current prototype:** **Review** when the randomized QR sequence completes; **Challenge failed** when it does not. It has no automatic Pass outcome.
+- **Future policy:** define Review/Inconclusive handling and recapture criteria only after validation on permitted held-out data.
 - Show evidence and model limitations; never present illustrative scores as measured results.
 
 ## Slide 7 — Feasibility
 
-- The current FastAPI/browser prototype provides the onboarding shell and QR challenge. Next feasibility gate: select a licensed face detector that runs within the team hardware/latency budget and produces inspectable frame/region evidence.
+- The current FastAPI/browser prototype wires the onboarding shell, QR challenge, live face-crop classifier, optional phrase/audio check, and simulated audit trail. Next feasibility gate: evaluate latency and accuracy on permitted held-out data and complete physical-device testing.
 - Phone signing is implemented with WebAuthn platform credentials and `userVerification: required`; a client-reported prompt-success boolean is not secure proof. A real cross-device run needs HTTPS and a server-verified assertion over a fresh nonce.
 - Evaluate the classifier, phone signature, and QR motion as separate components; successful phone/QR checks must not mask a weak or unavailable classifier.
 - Dataset options include the DFDC video dataset and ASVspoof speech-spoofing datasets, subject to access and license/terms review.
@@ -89,7 +88,7 @@ An explainable onboarding workflow with one primary detector and two supporting 
 
 - Which compact pretrained face-manipulation models fit the team's hardware and produce evidence that can be meaningfully inspected?
 - Do frame-level, frequency/texture, or temporal cues improve results on held-out recordings without making explanations misleading?
-- Does the figure-eight QR motion challenge reduce replay success while remaining usable on ordinary devices?
+- Does the six-box QR motion challenge reduce replay success while remaining usable on ordinary devices?
 - Can the phone key be used only after platform biometric verification, with every server assertion bound to a fresh session nonce?
 - How does performance change across unseen generators, devices, lighting, compression, and demographic groups?
 - Does the randomized challenge measurably reduce replay success without making legitimate onboarding too difficult?

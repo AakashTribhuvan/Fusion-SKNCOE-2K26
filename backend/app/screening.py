@@ -24,9 +24,10 @@ FACE_DETECTOR_URL = (
 )
 FACE_DETECTOR_SHA256 = "b4578f35940bf5a1a655214a1cce5cab13eba73c1297cd78e1a04c2380b0152f"
 FACE_DETECTOR_PATH = Path(__file__).resolve().parents[2] / ".tools" / "models" / "blaze_face_short_range.tflite"
-MAX_VIDEO_DURATION_SECONDS = 15
-MAX_VIDEO_DECODED_FRAMES = 1_800
-VIDEO_SAMPLE_INTERVAL_SECONDS = 1
+MAX_VIDEO_DURATION_SECONDS = 61
+MAX_VIDEO_DECODED_FRAMES = 3_600
+VIDEO_SAMPLE_INTERVAL_SECONDS = 0.5
+MAX_LIVE_FACE_DETECTION_WIDTH = 640
 _model_lock = threading.RLock()
 _processor: Any = None
 _classifier: Any = None
@@ -95,8 +96,8 @@ def video_model_status() -> dict[str, str]:
 def warm_video_model() -> dict[str, str]:
     with _model_lock:
         try:
-            _load_video_model()
             _get_face_detector()
+            _load_video_model()
         except RuntimeError:
             return video_model_status()
         return video_model_status()
@@ -136,6 +137,34 @@ def _get_face_detector() -> Any:
             )
             raise RuntimeError(_face_detector_error) from error
     return _face_detector
+
+
+def detect_live_faces(frame: np.ndarray) -> list[dict[str, float]]:
+    height, width = frame.shape[:2]
+    scale = min(1.0, MAX_LIVE_FACE_DETECTION_WIDTH / width)
+    detection_frame = (
+        cv2.resize(
+            frame,
+            (round(width * scale), round(height * scale)),
+            interpolation=cv2.INTER_AREA,
+        )
+        if scale < 1.0
+        else frame
+    )
+    rgb = cv2.cvtColor(detection_frame, cv2.COLOR_BGR2RGB)
+    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+    with _model_lock:
+        detections = _get_face_detector().detect(mp_image).detections
+    detection_height, detection_width = detection_frame.shape[:2]
+    return [
+        {
+            "x": detection.bounding_box.origin_x / detection_width,
+            "y": detection.bounding_box.origin_y / detection_height,
+            "width": detection.bounding_box.width / detection_width,
+            "height": detection.bounding_box.height / detection_height,
+        }
+        for detection in detections
+    ]
 
 
 def analyze_video_frame(frame: np.ndarray) -> dict[str, Any]:
@@ -201,7 +230,7 @@ def analyze_video_frame(frame: np.ndarray) -> dict[str, Any]:
 
 
 def decode_video_frames(video_bytes: bytes) -> list[tuple[int, np.ndarray]]:
-    """Decode a short in-memory recording into frames sampled once per second."""
+    """Decode a complete short recording and sample frames through its final frame."""
     samples: list[tuple[int, np.ndarray]] = []
     decoded_count = 0
     next_sample_at = 0.0
@@ -211,6 +240,9 @@ def decode_video_frames(video_bytes: bytes) -> list[tuple[int, np.ndarray]]:
             if stream is None:
                 raise ValueError("The submitted recording contains no video stream.")
             frame_rate = float(stream.average_rate or 30)
+            last_frame = None
+            last_timestamp = 0.0
+            last_sampled_timestamp = None
             for frame_index, frame in enumerate(container.decode(stream)):
                 decoded_count += 1
                 if decoded_count > MAX_VIDEO_DECODED_FRAMES:
@@ -221,20 +253,20 @@ def decode_video_frames(video_bytes: bytes) -> list[tuple[int, np.ndarray]]:
                     else frame_index / frame_rate
                 )
                 if timestamp < 0 or timestamp > MAX_VIDEO_DURATION_SECONDS:
-                    raise ValueError("The video recording must be 15 seconds or shorter.")
+                    raise ValueError("The video recording must be 60 seconds or shorter.")
+                last_frame = frame
+                last_timestamp = timestamp
                 if timestamp + 0.001 < next_sample_at:
                     continue
-                image = frame.to_ndarray(format="bgr24")
-                height, width = image.shape[:2]
-                if width * height > 8_000_000:
-                    scale = (8_000_000 / (width * height)) ** 0.5
-                    image = cv2.resize(
-                        image,
-                        (int(width * scale), int(height * scale)),
-                        interpolation=cv2.INTER_AREA,
-                    )
-                samples.append((round(timestamp * 1000), image))
-                next_sample_at = timestamp + VIDEO_SAMPLE_INTERVAL_SECONDS
+                samples.append((round(timestamp * 1000), _bounded_video_frame(frame)))
+                last_sampled_timestamp = timestamp
+                next_sample_at += VIDEO_SAMPLE_INTERVAL_SECONDS
+                while next_sample_at <= timestamp:
+                    next_sample_at += VIDEO_SAMPLE_INTERVAL_SECONDS
+            if last_frame is not None and (
+                last_sampled_timestamp is None or last_timestamp - last_sampled_timestamp > 0.001
+            ):
+                samples.append((round(last_timestamp * 1000), _bounded_video_frame(last_frame)))
     except av.error.FFmpegError as error:
         raise ValueError(f"The submitted video could not be decoded: {error}") from error
     if not samples:
@@ -242,6 +274,19 @@ def decode_video_frames(video_bytes: bytes) -> list[tuple[int, np.ndarray]]:
     if samples[-1][0] < 1_000:
         raise ValueError("The submitted video must contain at least one second of footage.")
     return samples
+
+
+def _bounded_video_frame(frame: av.VideoFrame) -> np.ndarray:
+    image = frame.to_ndarray(format="bgr24")
+    height, width = image.shape[:2]
+    if width * height > 8_000_000:
+        scale = (8_000_000 / (width * height)) ** 0.5
+        image = cv2.resize(
+            image,
+            (int(width * scale), int(height * scale)),
+            interpolation=cv2.INTER_AREA,
+        )
+    return image
 
 
 def summarize_video_frames(frames: list[dict[str, Any]]) -> dict[str, Any]:

@@ -28,6 +28,8 @@ models/weights/
 *.jpg
 *.jpeg
 *.png
+!/backend/app/static/assets/hdfc-hero.jpg
+!/backend/app/static/assets/icici-hero.jpg
 
 # Frontend dependencies/build output
 node_modules/

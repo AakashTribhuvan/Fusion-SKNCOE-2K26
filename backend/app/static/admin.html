@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f1f3ef">
+  <title>Frame / Check · Operator Admin</title>
+  <style>
+    :root{color-scheme:light;--canvas:#f1f3ef;--paper:#fff;--ink:#17241f;--muted:#66756d;--line:#d7ddd6;--green:#245c48;--green-dark:#194534;--amber:#fff5dd;--amber-line:#e4cb82}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--canvas);color:var(--ink);font:16px/1.6 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+    button,input{font:inherit}
+    .shell{width:min(1120px,100% - 40px);margin:auto;padding:0 0 48px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:74px;border-bottom:1px solid #a6afa7}
+    .brand{font-size:15px;font-weight:800;letter-spacing:.05em}
+    .brand span{display:block;margin-top:2px;color:var(--muted);font-size:13px;font-weight:500;letter-spacing:0}
+    .muted{color:var(--muted);font-size:14px}
+    header a{color:var(--green);font-size:14px;font-weight:700;text-decoration:none}
+    main{padding-top:34px}
+    .intro{max-width:760px;margin-bottom:22px}
+    .eyebrow{margin:0 0 5px;color:var(--green);font-size:13px;font-weight:800;letter-spacing:.11em;text-transform:uppercase}
+    h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(36px,6vw,56px);font-weight:500;letter-spacing:-.04em;line-height:1.04}
+    .intro p:last-child{max-width:720px;margin:12px 0 0;color:var(--muted);font-size:17px}
+    .warning{margin:18px 0;padding:16px 18px;border:1px solid var(--amber-line);border-left:5px solid #c9951c;border-radius:8px;background:var(--amber);color:#594b2c}
+    .warning strong{display:block;margin-bottom:3px;color:#453b25}
+    .panel{margin-top:17px;padding:20px;border:1px solid var(--line);border-radius:12px;background:var(--paper);box-shadow:0 12px 35px #17241f08}
+    button,input{min-height:46px;padding:10px 12px;border:1px solid #b7c2b9;border-radius:6px;background:#fff;color:var(--ink)}
+    button{padding:0 16px;border-color:var(--green);background:var(--green);color:#fff;font-weight:750;cursor:pointer}
+    button:hover:not(:disabled){background:var(--green-dark)}
+    button:disabled{opacity:.55;cursor:not-allowed}
+    button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid #81a8ed;outline-offset:2px}
+    .list-heading{display:flex;justify-content:space-between;align-items:center;gap:14px}
+    h2{margin:0;font-size:23px;letter-spacing:-.025em}
+    .list-heading p{margin:3px 0 0;color:var(--muted);font-size:14px}
+    #session-count{color:var(--muted);font-size:14px;white-space:nowrap}
+    #refresh-status{min-height:24px;margin:10px 0 0;color:var(--muted);font-size:14px}
+    #sessions{display:grid;gap:12px;margin-top:16px}
+    .session{padding:17px;border:1px solid var(--line);border-radius:9px;background:#fbfcfa}
+    .session-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+    .session-id{font:600 14px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}
+    .badge{flex:none;padding:4px 9px;border:1px solid #cbd8cf;border-radius:999px;background:#edf4ee;color:#315b43;font-size:12px;font-weight:800;text-transform:uppercase}
+    .badge.waiting{border-color:#e4cf91;background:#fff6de;color:#765716}
+    .badge.stale{border-color:#d9deda;background:#f1f3f1;color:#647068}
+    .facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:13px}
+    .fact{padding:9px 10px;border:1px solid #e6eae5;border-radius:6px;background:#fff}
+    .fact small{display:block;color:var(--muted);font-size:12px}
+    .fact strong{display:block;margin-top:2px;font-size:14px;overflow-wrap:anywhere}
+    .override-note{margin:12px 0 0;padding:11px 12px;border-left:3px solid #bf8c15;background:var(--amber);color:#594b2c;font-size:14px}
+    .override-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end;margin-top:13px;padding-top:13px;border-top:1px solid var(--line)}
+    .override-form label{display:block;margin-bottom:5px;font-size:14px;font-weight:750}
+    .override-form input{width:100%;min-height:44px}
+    .override-form button{border-color:#8c3b2d;background:#8c3b2d}
+    .empty{padding:32px 16px;border:1px dashed #b9c3ba;border-radius:8px;color:var(--muted);text-align:center}
+    @media(max-width:680px){.shell{width:min(100% - 24px,1120px)}header{min-height:64px}.override-form{grid-template-columns:1fr}.override-form button{width:100%}.facts{grid-template-columns:repeat(2,minmax(0,1fr))}.panel{padding:16px}.list-heading{align-items:flex-start;flex-direction:column}#session-count{white-space:normal}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand">FRAME / CHECK<span>Operator controls · local computer only</span></div>
+      <a href="/">Back to verification ↗</a>
+    </header>
+    <main>
+      <section class="intro">
+        <p class="eyebrow">Local operator page</p>
+        <h1>Session controls</h1>
+        <p>Monitor in-memory demo sessions and recover a video step that is genuinely stuck. This operator page works only when opened directly on the server computer.</p>
+      </section>
+      <aside class="warning">
+        <strong>Overrides are recorded as skipped, never passed.</strong>
+        A video override discards screening results, unblocks the optional voice/report steps, and forces the final report to be inconclusive. The operator reason and time appear in that report.
+      </aside>
+      <section class="panel" aria-labelledby="sessions-heading">
+        <div class="list-heading">
+          <div><h2 id="sessions-heading">Recent sessions</h2><p>Only session metadata is shown here; phone tokens, QR codes, and evidence are never listed.</p></div>
+          <span id="session-count">Loading…</span>
+        </div>
+        <p id="refresh-status" role="status" aria-live="polite">Connecting to the local server…</p>
+        <div id="sessions"><div class="empty">Loading local sessions…</div></div>
+      </section>
+    </main>
+  </div>
+  <script>
+    (() => {
+      const refreshStatus = document.getElementById('refresh-status');
+      const sessionList = document.getElementById('sessions');
+      let refreshInProgress = false;
+
+      const element = (tag, className, text) => {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined) node.textContent = text;
+        return node;
+      };
+      const request = async (path, options = {}) => {
+        const response = await fetch(path, {
+          ...options,
+          cache: 'no-store',
+          headers: {
+            ...(options.body ? {'Content-Type':'application/json'} : {}),
+            ...(options.headers || {}),
+          },
+        });
+        const data = response.headers.get('content-type')?.includes('application/json') ? await response.json() : null;
+        if (!response.ok) throw new Error(data?.detail || `Request failed (${response.status})`);
+        return data;
+      };
+      const displayTime = (value) => {
+        if (!value) return '—';
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString();
+      };
+      const addFact = (container, label, value) => {
+        const fact = element('div', 'fact');
+        fact.append(element('small', '', label), element('strong', '', value));
+        container.append(fact);
+      };
+      const renderSessions = (sessions) => {
+        sessionList.replaceChildren();
+        document.getElementById('session-count').textContent = `${sessions.length} shown`;
+        if (!sessions.length) {
+          sessionList.append(element('div', 'empty', 'No sessions are currently in memory.'));
+          return;
+        }
+        sessions.forEach((session) => {
+          const card = element('article', 'session');
+          const top = element('div', 'session-top');
+          const identity = element('div');
+          identity.append(
+            element('div', 'session-id', session.id),
+            element('div', 'muted', `Started ${displayTime(session.created_at)} · expires ${displayTime(session.expires_at)}`),
+          );
+          const status = session.video_manually_skipped ? 'VIDEO SKIPPED' : session.video_processing ? 'VIDEO PROCESSING' : session.video_submitted ? 'VIDEO COMPLETE' : session.challenge_status ? session.challenge_status.toUpperCase() : 'NO CHALLENGE';
+          const badgeClass = session.video_processing ? 'badge waiting' : session.status !== 'active' ? 'badge stale' : 'badge';
+          top.append(identity, element('span', badgeClass, status));
+          card.append(top);
+
+          const facts = element('div', 'facts');
+          addFact(facts, 'Session', session.status);
+          addFact(facts, 'Phone verified', session.phone_verified ? 'Yes' : 'No');
+          addFact(facts, 'QR targets reached', `${session.qr_targets_reached}/6`);
+          addFact(facts, 'Report', session.report_ready ? 'Ready' : 'Not submitted');
+          card.append(facts);
+
+          if (session.video_manually_skipped) {
+            card.append(element('p', 'override-note', `Manual override · ${session.video_override_reason || 'No reason supplied.'} · ${displayTime(session.video_override_at)}. Video was skipped, not passed.`));
+          } else if (session.video_processing && session.challenge_id && session.status === 'active') {
+            const overrideForm = element('form', 'override-form');
+            const reasonWrap = element('div');
+            const reasonId = `reason-${session.id}`;
+            const reasonLabel = element('label', '', 'Why is this video step being skipped?');
+            reasonLabel.htmlFor = reasonId;
+            const reason = element('input');
+            reason.id = reasonId;
+            reason.name = 'reason';
+            reason.required = true;
+            reason.minLength = 8;
+            reason.maxLength = 300;
+            reason.placeholder = 'Example: screening timed out during a supervised demo';
+            const submit = element('button', '', 'Skip video · continue');
+            submit.type = 'submit';
+            reasonWrap.append(reasonLabel, reason);
+            overrideForm.append(reasonWrap, submit);
+            overrideForm.addEventListener('submit', async (event) => {
+              event.preventDefault();
+              if (!window.confirm('Skip video screening for this session? The final report will be marked INCONCLUSIVE, never passed.')) return;
+              submit.disabled = true;
+              refreshStatus.textContent = `Applying the documented override to session ${session.id}…`;
+              try {
+                const updated = await request(`/api/admin/sessions/${session.id}/skip-video`, {
+                  method: 'POST',
+                  body: JSON.stringify({challenge_id: session.challenge_id, reason: reason.value.trim()}),
+                });
+                refreshStatus.textContent = `Video screening skipped for ${updated.id}. The participant page will advance to the optional voice step.`;
+                await refreshSessions();
+              } catch (error) {
+                refreshStatus.textContent = `Override not applied: ${error.message}`;
+                submit.disabled = false;
+              }
+            });
+            card.append(overrideForm);
+          }
+          sessionList.append(card);
+        });
+      };
+      async function refreshSessions() {
+        if (refreshInProgress) return;
+        refreshInProgress = true;
+        try {
+          const data = await request('/api/admin/sessions');
+          renderSessions(data.sessions);
+          refreshStatus.textContent = `Updated ${new Date().toLocaleTimeString()}. Refreshes every 5 seconds.`;
+        } catch (error) {
+          document.getElementById('session-count').textContent = 'Unavailable';
+          sessionList.replaceChildren(element('div', 'empty', 'Local admin controls are unavailable. Open this page directly on the server computer and confirm admin controls are enabled.'));
+          refreshStatus.textContent = `Could not load local sessions: ${error.message}`;
+        } finally {
+          refreshInProgress = false;
+        }
+      }
+      refreshSessions();
+      window.setInterval(refreshSessions, 5000);
+    })();
+  </script>
+</body>
+</html>
