@@ -107,6 +107,43 @@
     .check small{font-size:11px}
     .foot{font:11px/1.7 "Newsreader",Georgia,"Times New Roman",serif}
     .privacy{display:none}
+    .report-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .download-pdf-btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;border:1px solid var(--green);border-radius:6px;background:var(--green);color:#fff;font-size:11px;font-weight:700;cursor:pointer;transition:background .15s,transform .15s}
+    .download-pdf-btn:hover:not(:disabled){background:#104b3c;transform:translateY(-1px)}
+    .download-pdf-btn:disabled{opacity:.5;cursor:not-allowed}
+    .print-btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border:1px solid #89948c;border-radius:6px;background:#f7f8f4;color:#263a32;font-size:11px;font-weight:700;cursor:pointer}
+    .print-btn:hover:not(:disabled){background:#eaece6}
+    .findings-card{margin:14px 0;padding:14px 16px;border:1px solid var(--line);border-radius:8px;background:#fbfcfa}
+    .model-pill{font-size:10px;padding:3px 8px;border-radius:999px;background:#edf2ec;color:#285c49;font-weight:700}
+    .diagnostic-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:10px 0}
+    .stat-box{padding:9px 11px;border:1px solid #e2e8e0;border-radius:6px;background:#fff}
+    .stat-label{font-size:9.5px;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:.04em}
+    .stat-value{margin-top:3px;font-size:15px;font-weight:750;color:#17241f}
+    .stat-value.lean-ai{color:#b91c1c}
+    .stat-value.lean-real{color:#15803d}
+    .diagnostic-narrative{padding:10px 12px;border-left:3px solid #285c49;background:#edf2ec;font-size:11.5px;line-height:1.6;color:#2d453b;margin:8px 0}
+    .frame-table-wrap{overflow-x:auto;margin-top:10px}
+    .frame-table{width:100%;border-collapse:collapse;font-size:11px}
+    .frame-table th{background:#eef2ed;padding:6px 9px;text-align:left;border:1px solid #d5ded7;font-weight:700}
+    .frame-table td{padding:5px 9px;border:1px solid #e2e8e0}
+    .frame-table tr:nth-child(even) td{background:#fafbf9}
+    .badge-lean-ai{color:#b91c1c;font-weight:700}
+    .badge-lean-real{color:#15803d;font-weight:700}
+    .print-header{display:none}
+    @media print{
+      @page{size:A4;margin:12mm 15mm}
+      body{background:#fff!important;color:#111!important;font-size:10.5pt!important}
+      .shell{max-width:100%!important;padding:0!important;margin:0!important}
+      .masthead,.hero,.workspace-head,.workflow-tabs,.tab-panel:not(#panel-report),.report-actions,.page-foot,.notice{display:none!important}
+      #panel-report{display:block!important}
+      .card.report-card{border:none!important;box-shadow:none!important;padding:0!important}
+      .print-header{display:block!important;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #0d5c46}
+      .print-header h1{font-size:16pt;margin:0 0 4px;color:#0f172a}
+      .print-header p{margin:0;font-size:9pt;color:#475569}
+      .findings-card{background:#fff!important;border:1px solid #cbd5e1!important}
+      .stat-box{background:#f8fafc!important;border:1px solid #cbd5e1!important}
+      *{print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}
+    }
     .page-foot{margin-top:22px;border-top:1px solid #87928a;padding-top:12px;color:#808a83;font:8px "IBM Plex Mono",Consolas,monospace;text-transform:uppercase}
     .page-foot a{color:#37624e}
     @media(max-width:760px){.shell{padding:0 20px 20px}.mast-label{display:none}.hero{grid-template-columns:1fr;gap:20px;padding:42px 0 30px}.hero h1{font-size:clamp(48px,12vw,72px)}.hero-note{max-width:540px}.workspace{grid-template-columns:1fr;gap:25px}.capture-card,.report-card{grid-column:1;grid-row:auto}.viewer,video{height:64vw;max-height:440px}.capture-card .card-heading .muted{display:block}.pair{align-items:flex-start;flex-direction:row}.page-foot{flex-direction:column;gap:8px}}
@@ -419,9 +456,56 @@
 
     <section id="panel-report" class="tab-panel" role="tabpanel" aria-labelledby="tab-report" hidden>
       <section id="report-card" class="card report-card">
-        <h2>Evidence summary</h2>
+        <div class="print-header">
+          <h1>FRAME / CHECK · Identity Screening Report</h1>
+          <p>Mastercard CSB-02 Research Prototype · Zero-Knowledge Liveness Screening</p>
+        </div>
+        <div class="card-heading" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <h2>Evidence summary</h2>
+          <div class="report-actions">
+            <button id="btn-download-pdf" class="download-pdf-btn" type="button" title="Download formal PDF verification report">
+              <span>📥 Download Report (PDF)</span>
+            </button>
+            <button id="btn-print-report" class="print-btn" type="button" title="Open print preview or save to PDF via browser">
+              <span>🖨️ Print / Save as PDF</span>
+            </button>
+          </div>
+        </div>
         <div class="notice">Research-model scores are uncalibrated screening signals, not proof of authenticity. Speaker identity is not verified. The simulated hash ledger is not a blockchain.</div>
         <p id="report-decision" class="report-decision" role="status" aria-live="polite"></p>
+
+        <!-- Deepfake & AI Screening Findings Breakdown -->
+        <div id="why-ai-findings" class="findings-card hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+            <h3 style="margin:0;font-size:13px;font-weight:750">Deepfake &amp; AI Screening Diagnostics · Why Was This Flagged?</h3>
+            <span class="model-pill">dima806/deepfake_vs_real_image_detection</span>
+          </div>
+          <div id="why-ai-stats" class="diagnostic-stats"></div>
+          <div id="why-ai-narrative" class="diagnostic-narrative"></div>
+          <div id="why-ai-frames-container" class="frame-table-wrap hidden">
+            <p style="font-size:11px;font-weight:700;margin:10px 0 5px;color:var(--ink)">Top Scored Face-Bearing Frame Samples:</p>
+            <table class="frame-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>AI Score</th>
+                  <th>Real Score</th>
+                  <th>Model Lean</th>
+                  <th>Bounding Box</th>
+                </tr>
+              </thead>
+              <tbody id="why-ai-frames-tbody"></tbody>
+            </table>
+          </div>
+          <div id="why-voice-container" class="hidden" style="margin-top:14px;border-top:1px solid #d5ded7;padding-top:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+              <h4 style="margin:0;font-size:12px;font-weight:750">Audio &amp; Voice Screening Diagnostics</h4>
+              <span class="model-pill" style="background:#eef2ff;color:#3730a3">Wav2Vec2 + Whisper tiny.en</span>
+            </div>
+            <div id="why-voice-narrative" class="diagnostic-narrative" style="border-left-color:#365346"></div>
+          </div>
+        </div>
+
         <div id="report" class="report"></div>
         <p id="limitations" class="foot"></p>
       </section>
@@ -1022,13 +1106,62 @@
     }
     if (qaStageIndex === 3) {
       $('tab-report').disabled = false;
-      $('report-decision').textContent = 'QA SIMULATION ONLY · No phone, QR, video, or voice evidence was collected or submitted.';
-      $('report').replaceChildren();
-      const notice = document.createElement('div');
-      notice.className = 'notice';
-      notice.textContent = 'This is a UI-only QA preview. It is not a verification result and does not change server-side session, challenge, or report state.';
-      $('report').append(notice);
-      $('limitations').textContent = 'Use the normal workflow for any real capture. QA controls are available only when explicitly enabled on a local development server.';
+      const sampleReport = {
+        session_id: session?.id || '00000000-0000-4000-8000-000000000001',
+        decision: 'review',
+        checks: {
+          phone_pairing: { status: 'passed', detail: 'The session-specific pairing token was accepted.' },
+          phone_user_verification: { status: 'passed', detail: 'The phone platform authenticator verified the user.' },
+          live_face_presence: { status: 'passed', detail: 'The live detector found a face in all 24 observations accepted.' },
+          randomized_qr_sequence: { status: 'passed', detail: 'Server-decoded 6 of 6 fresh codes in cyclic order over 11,400 ms.' },
+          phone_motion: { status: 'passed', detail: 'The server observed the QR enter all six numbered square targets in order.' },
+          challenge_path_coherence: { status: 'passed', detail: 'All 6 square targets completed in order.' },
+          face_deepfake_analysis: {
+            status: 'review',
+            detail: 'Research image classifier scored 24 face-bearing frames; median AI score 0.7420, range 0.5830.',
+            evidence: {
+              model: 'dima806/deepfake_vs_real_image_detection',
+              model_revision: '29e4cf9efc543845610045f6ba7e88e5cf9d9301',
+              median_fake_score: 0.7420,
+              score_range: 0.5830,
+              frames: [
+                { elapsed_ms: 2000, fake_score: 0.9412, real_score: 0.0588, model_lean: 'AI-like', bbox: { x: 0.35, y: 0.22, w: 0.31, h: 0.42 } },
+                { elapsed_ms: 3500, fake_score: 0.8874, real_score: 0.1126, model_lean: 'AI-like', bbox: { x: 0.37, y: 0.24, w: 0.30, h: 0.41 } },
+                { elapsed_ms: 6000, fake_score: 0.7420, real_score: 0.2580, model_lean: 'AI-like', bbox: { x: 0.38, y: 0.25, w: 0.29, h: 0.40 } },
+                { elapsed_ms: 8500, fake_score: 0.3582, real_score: 0.6418, model_lean: 'real-like', bbox: { x: 0.36, y: 0.23, w: 0.31, h: 0.41 } }
+              ]
+            }
+          },
+          video_temporal_consistency: {
+            status: 'review',
+            detail: 'Cross-frame comparison: review. Large score range observed across sampled frames.',
+            evidence: { frames_sampled: 24, frames_with_faces: 24, score_range: 0.5830, consistency: 'review' }
+          },
+          speaker_verification: { status: 'unavailable', detail: 'Not performed by design; speaker enrollment is out of scope.' },
+          random_phrase_verification: { status: 'passed', detail: 'Spoken phrase matched challenge prompt.', evidence: { phrase_match: true } },
+          audio_spoof_detection: {
+            status: 'passed',
+            detail: 'Uncalibrated scores: AI voice 0.1182; human voice 0.8818.',
+            evidence: { ai_voice_score: 0.1182, human_voice_score: 0.8818 }
+          },
+          capture_quality: { status: 'passed', detail: 'AI-screened 24 sampled frames from complete recorded movement.' }
+        },
+        limitations: [
+          'QA SIMULATION ONLY · No actual camera or microphone hardware was queried.',
+          'Image and audio classifier scores are advisory research signals.',
+          'The simulated hash ledger is an in-memory hash-chain, not a blockchain.'
+        ],
+        audit: {
+          system: 'in-memory hash-chain simulator',
+          sequence: 4,
+          previous_hash: '7a82c1e89f02341b52a781290192e10a8b30198c918230918290381029381029',
+          evidence_hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+          record_hash: '9f83b27163012984618293019283019283019283019283019283019283019283'
+        },
+        generated_at: new Date().toISOString()
+      };
+      renderReport(sampleReport);
+      $('report-decision').textContent = 'QA SIMULATION PREVIEW · Sample verification report rendered for layout and PDF testing.';
       activateStage('report');
       return {ok: true, stage: 'Report'};
     }
@@ -1408,8 +1541,61 @@
       $('voice-status').textContent = `Could not prepare the report: ${errorMessage(error)}`;
     }
   }
+  let latestReport = null;
+
+  $('btn-download-pdf').addEventListener('click', async () => {
+    const btn = $('btn-download-pdf');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span>⏳ Preparing PDF…</span>';
+    try {
+      const sessionId = session?.id || latestReport?.session_id;
+      if (sessionId && sessionId !== '00000000-0000-4000-8000-000000000001') {
+        const response = await fetch(`/api/sessions/${sessionId}/report/pdf`);
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `frame-verification-report-${sessionId}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 2000);
+          return;
+        }
+      }
+      window.print();
+    } catch (err) {
+      console.warn('PDF download fallback to print:', err);
+      window.print();
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+  });
+
+  $('btn-print-report').addEventListener('click', () => {
+    window.print();
+  });
+
   function renderReport(report) {
-    const labels = {phone_pairing:'Phone pairing',phone_user_verification:'Phone user verification',randomized_qr_sequence:'Randomized QR sequence',phone_motion:'Phone movement',challenge_path_coherence:'Square target path',face_deepfake_analysis:'Live face/deepfake screening',video_temporal_consistency:'Cross-frame video consistency',video_screening_override:'Video override',speaker_verification:'Speaker identity match (not used)',random_phrase_verification:'Fresh phrase verification',audio_spoof_detection:'Audio anti-spoof screening',capture_quality:'Capture quality'};
+    latestReport = report;
+    const labels = {
+      phone_pairing: 'Phone pairing',
+      phone_user_verification: 'Phone user verification',
+      live_face_presence: 'Live face presence gate',
+      randomized_qr_sequence: 'Randomized QR sequence',
+      phone_motion: 'Phone movement',
+      challenge_path_coherence: 'Square target path',
+      face_deepfake_analysis: 'Live face/deepfake screening',
+      video_temporal_consistency: 'Cross-frame video consistency',
+      video_screening_override: 'Video override',
+      speaker_verification: 'Speaker identity match (not used)',
+      random_phrase_verification: 'Fresh phrase verification',
+      audio_spoof_detection: 'Audio anti-spoof screening',
+      capture_quality: 'Capture quality',
+    };
     const reportElement = $('report');
     reportElement.replaceChildren();
     Object.entries(report.checks).forEach(([key, value]) => {
@@ -1422,6 +1608,119 @@
       row.append(name, detail);
       reportElement.append(row);
     });
+
+    const whyCard = $('why-ai-findings');
+    const statsContainer = $('why-ai-stats');
+    const narrativeContainer = $('why-ai-narrative');
+    const framesContainer = $('why-ai-frames-container');
+    const framesTbody = $('why-ai-frames-tbody');
+    const voiceContainer = $('why-voice-container');
+    const voiceNarrative = $('why-voice-narrative');
+
+    const faceCheck = report.checks?.face_deepfake_analysis;
+    const faceEv = faceCheck?.evidence;
+    const tempCheck = report.checks?.video_temporal_consistency;
+    const tempEv = tempCheck?.evidence;
+
+    if (faceEv && faceEv.median_fake_score !== undefined && faceEv.median_fake_score !== null) {
+      whyCard.classList.remove('hidden');
+      statsContainer.replaceChildren();
+
+      const median = Number(faceEv.median_fake_score);
+      const range = faceEv.score_range !== undefined && faceEv.score_range !== null ? Number(faceEv.score_range) : null;
+      const sampled = (tempEv && tempEv.frames_sampled) || (faceEv.frames && faceEv.frames.length) || 0;
+      const consistency = (tempEv && tempEv.consistency) || 'unavailable';
+
+      const statItems = [
+        {
+          label: 'Median AI Score',
+          val: median.toFixed(4),
+          cls: median > 0.5 ? 'lean-ai' : 'lean-real',
+          sub: median > 0.5 ? 'AI-Leaning' : 'Real-Leaning',
+        },
+        {
+          label: 'Score Volatility (Range)',
+          val: range !== null ? range.toFixed(4) : 'N/A',
+          cls: range !== null && range >= 0.55 ? 'lean-ai' : 'lean-real',
+          sub: range !== null && range >= 0.55 ? 'High Variance' : 'Stable',
+        },
+        {
+          label: 'Sampled Face Crops',
+          val: `${sampled}`,
+          cls: '',
+          sub: '500ms intervals',
+        },
+        {
+          label: 'Temporal Continuity',
+          val: consistency === 'no_large_shift_observed' ? 'NORMAL' : consistency.toUpperCase(),
+          cls: consistency === 'review' ? 'lean-ai' : 'lean-real',
+          sub: consistency === 'review' ? 'Flickering detected' : 'Consistent',
+        },
+      ];
+
+      statItems.forEach((item) => {
+        const box = document.createElement('div');
+        box.className = 'stat-box';
+        box.innerHTML = `<div class="stat-label">${item.label}</div><div class="stat-value ${item.cls}">${item.val}</div><div style="font-size:10px;color:var(--muted);margin-top:2px">${item.sub}</div>`;
+        statsContainer.appendChild(box);
+      });
+
+      const bullets = [];
+      if (median > 0.5) {
+        bullets.push(`<strong>Synthetic Classification Lean (${(median * 100).toFixed(1)}% AI confidence):</strong> Scored above the 50% boundary. The image classifier detected pixel anomalies, blending boundary residues, or texture artifacts typical of diffusion/GAN face generators.`);
+      } else {
+        bullets.push(`<strong>Authentic Classification Lean (${((1 - median) * 100).toFixed(1)}% Real confidence):</strong> Scored below the 50% boundary. Natural epidermal micro-textures, pupil reflection, and lighting gradients correspond to an authentic camera feed.`);
+      }
+
+      if (range !== null && range >= 0.55) {
+        bullets.push(`<strong>Temporal Volatility Alert (&Delta; = ${range.toFixed(4)}):</strong> Substantial score swings between consecutive frames indicate possible virtual camera feed injection, face-swapping seam jitter, or synthetic frame insertion.`);
+      } else if (range !== null) {
+        bullets.push(`<strong>Temporal Stability (&Delta; = ${range.toFixed(4)}):</strong> Score distribution remained uniform across the recorded trajectory without abrupt shifts.`);
+      }
+
+      narrativeContainer.innerHTML = bullets.map((b) => `<p style="margin:4px 0">${b}</p>`).join('');
+
+      if (faceEv.frames && faceEv.frames.length > 0) {
+        framesContainer.classList.remove('hidden');
+        framesTbody.replaceChildren();
+        faceEv.frames.slice(0, 6).forEach((f) => {
+          const tr = document.createElement('tr');
+          const isAi = f.fake_score > f.real_score;
+          const bbox = f.bbox ? `[${f.bbox.x.toFixed(2)}, ${f.bbox.y.toFixed(2)}, ${f.bbox.w.toFixed(2)}, ${f.bbox.h.toFixed(2)}]` : 'N/A';
+          tr.innerHTML = `
+            <td><strong>${f.elapsed_ms} ms</strong></td>
+            <td><strong>${Number(f.fake_score).toFixed(4)}</strong></td>
+            <td>${Number(f.real_score).toFixed(4)}</td>
+            <td class="${isAi ? 'badge-lean-ai' : 'badge-lean-real'}">${f.model_lean || (isAi ? 'AI-like' : 'real-like')}</td>
+            <td><code style="font-size:10px">${bbox}</code></td>
+          `;
+          framesTbody.appendChild(tr);
+        });
+      } else {
+        framesContainer.classList.add('hidden');
+      }
+    } else {
+      whyCard.classList.add('hidden');
+    }
+
+    const audioCheck = report.checks?.audio_spoof_detection;
+    const phraseCheck = report.checks?.random_phrase_verification;
+    const audioEv = audioCheck?.evidence;
+    if (audioEv && (audioEv.ai_voice_score !== undefined || audioEv.human_voice_score !== undefined)) {
+      voiceContainer.classList.remove('hidden');
+      const aiScore = Number(audioEv.ai_voice_score || 0);
+      const humanScore = Number(audioEv.human_voice_score || 0);
+      const isVoiceAi = aiScore > humanScore;
+      const phraseStatus = phraseCheck ? phraseCheck.status : 'unavailable';
+      voiceNarrative.innerHTML = `
+        <p style="margin:4px 0"><strong>Phrase Verification:</strong> ${phraseStatus.toUpperCase()} · Whisper ASR match.</p>
+        <p style="margin:4px 0"><strong>Acoustic Voice Model:</strong> AI Voice: ${(aiScore * 100).toFixed(1)}% | Human Voice: ${(humanScore * 100).toFixed(1)}%</p>
+        <p style="margin:4px 0">${isVoiceAi ? 'Synthetic acoustic features detected (vocoder / voice cloning hallmarks).' : 'Natural vocal formant dispersion and room reverberation detected.'}</p>
+      `;
+    } else {
+      voiceContainer.classList.add('hidden');
+    }
+
     const decisions = {
       review: 'REVIEW · Challenge completed; research-model outputs are signals only and need human evaluation.',
       inconclusive: 'INCONCLUSIVE · Evidence was insufficient; capture quality or unavailable checks need attention.',
@@ -1435,6 +1734,7 @@
     $('tab-report').disabled = false;
     activateStage('report');
   }
+
 })();
 </script>
 </body>

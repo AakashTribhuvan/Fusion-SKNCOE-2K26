@@ -55,6 +55,7 @@ from .screening import (
     warm_video_model,
 )
 from .voice_screening import analyze_audio, audio_model_status, warm_audio_model, warm_transcriber
+from .report_pdf import generate_report_pdf
 
 
 ROOT = Path(__file__).resolve().parent
@@ -1403,3 +1404,20 @@ def get_result(session_id: UUID) -> VerificationReport:
     if state.result is None:
         raise HTTPException(status_code=404, detail="No verification report is available yet")
     return VerificationReport.model_validate(state.result)
+
+
+@app.get("/api/sessions/{session_id}/report/pdf", tags=["verification"])
+def download_report_pdf(session_id: UUID) -> Response:
+    state = _session(session_id)
+    _ensure_active(state)
+    if state.result is None:
+        raise HTTPException(status_code=404, detail="No verification report is available yet")
+    pdf_bytes = generate_report_pdf(state.result, session_id)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="frame-verification-report-{session_id}.pdf"',
+            "Cache-Control": "no-store",
+        },
+    )

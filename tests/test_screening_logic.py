@@ -597,6 +597,71 @@ class ScreeningLogicTests(unittest.TestCase):
         self.assertIsNone(state.audio_result)
         self.assertIsNone(state.result)
 
+    def test_download_report_pdf_404_when_no_result(self) -> None:
+        now = utc_now()
+        state = SessionState(
+            id=uuid4(),
+            pair_token="long-enough-pair-token-value",
+            created_at=now,
+            expires_at=now + timedelta(minutes=1),
+        )
+        client = TestClient(main_module.app)
+        with patch.dict(main_module._sessions, {state.id: state}):
+            response = client.get(f"/api/sessions/{state.id}/report/pdf")
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("No verification report is available yet", response.json()["detail"])
+
+    def test_download_report_pdf_returns_valid_pdf(self) -> None:
+        now = utc_now()
+        state = SessionState(
+            id=uuid4(),
+            pair_token="long-enough-pair-token-value",
+            created_at=now,
+            expires_at=now + timedelta(minutes=1),
+            result={
+                "session_id": str(uuid4()),
+                "decision": "review",
+                "checks": {
+                    "face_deepfake_analysis": {
+                        "status": "review",
+                        "detail": "Median AI score 0.7420",
+                        "evidence": {
+                            "median_fake_score": 0.742,
+                            "score_range": 0.583,
+                            "frames": [
+                                {
+                                    "elapsed_ms": 1000,
+                                    "fake_score": 0.82,
+                                    "real_score": 0.18,
+                                    "model_lean": "AI-like",
+                                    "bbox": {"x": 0.3, "y": 0.2, "w": 0.4, "h": 0.4},
+                                }
+                            ],
+                        },
+                    },
+                    "phone_pairing": {"status": "passed", "detail": "Paired successfully"},
+                },
+                "limitations": ["Research prototype."],
+                "audit": {
+                    "system": "in-memory hash-chain simulator",
+                    "sequence": 1,
+                    "previous_hash": "0" * 64,
+                    "evidence_hash": "a" * 64,
+                    "record_hash": "b" * 64,
+                },
+                "generated_at": now.isoformat(),
+            },
+        )
+        client = TestClient(main_module.app)
+        with patch.dict(main_module._sessions, {state.id: state}):
+            response = client.get(f"/api/sessions/{state.id}/report/pdf")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["content-type"], "application/pdf")
+        self.assertIn("attachment; filename=", response.headers["content-disposition"])
+        self.assertTrue(response.content.startswith(b"%PDF-"))
+        self.assertGreater(len(response.content), 1000)
+
 
 if __name__ == "__main__":
     unittest.main()
+
