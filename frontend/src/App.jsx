@@ -151,8 +151,8 @@ function VideoResultCard({ result }) {
         <div className="stat-row"><span>AI analysis:</span> <strong>{ai_analysis.frames_flagged} / {ai_analysis.frames_analyzed} suspicious</strong></div>
       </div>
       <div className="video-overall" style={{ borderLeftColor: isDanger ? '#d32f2f' : '#6b4c9a' }}>
-        <strong>Overall:</strong> <span className={isDanger ? 'bad-text' : 'good-text'}>{isDanger ? '⚠ POTENTIAL AI MANIPULATION' : '✅ NO THREAT DETECTED'}</span>
-        <br/><small>Consent: {final_status.replace(/_/g, ' ')}</small>
+        <strong>Overall:</strong> <span className={isDanger ? 'bad-text' : 'good-text'}>{isDanger ? '⚠ POTENTIAL AI MANIPULATION' : '✅ REAL / AUTHENTIC VIDEO'}</span>
+        <br/><small>Status: {final_status.replace(/_/g, ' ')}</small>
       </div>
       <div className="timeline-container">
         <p className="timeline-label">Frame Timeline</p>

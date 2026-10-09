@@ -23,14 +23,16 @@ DISTANCE_METRIC = "cosine"
 
 # === Matching Thresholds ===
 MATCH_THRESHOLD = 0.55              # Cosine similarity: above this = match
-FACE_CONFIDENCE_MIN = 0.80          # Minimum face detection confidence
+FACE_CONFIDENCE_MIN = 0.70          # Minimum face detection confidence
 
 # === Video Processing ===
 VIDEO_SAMPLE_INTERVAL = 2.0         # Seconds between frame samples
 
-# AI Image Detector Settings
-AI_DETECTOR_MODEL = 'dima806/deepfake_vs_real_image_detection'
-AI_DETECTOR_THRESHOLD = 0.85        # Increased threshold to reduce false positives
+# AI Image Detector Settings (Upgraded to prithivMLmods/Deep-Fake-Detector-Model for modern diffusion + GAN detection)
+AI_DETECTOR_MODEL = 'prithivMLmods/Deep-Fake-Detector-Model'
+AI_DETECTOR_THRESHOLD = 0.38        # Calibrated threshold for modern synthetic detection (natural human faces <= 0.28)
+MIN_FACE_SIZE = 36                  # Minimum face width/height
+FACE_CROP_PADDING = 0.35            # 35% margin around face for balanced modern face forensics
 
 # === FAISS Index ===
 FAISS_INDEX_PATH = os.path.join(STORAGE_DIR, "faiss_index.bin")

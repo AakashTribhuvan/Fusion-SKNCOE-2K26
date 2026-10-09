@@ -93,6 +93,29 @@ def _decode_image(contents: bytes) -> np.ndarray:
     return img
 
 
+def _crop_portrait_face(img: np.ndarray, area: dict) -> np.ndarray:
+    """Crop face with balanced square-like portrait context to avoid ViT aspect ratio distortion."""
+    ih, iw = img.shape[:2]
+    x, y, w, h = int(area.get('x', 0)), int(area.get('y', 0)), int(area.get('w', 0)), int(area.get('h', 0))
+    pad_ratio = float(getattr(config, "FACE_CROP_PADDING", 0.55))
+    pad_w = int(w * pad_ratio)
+    pad_h = int(h * pad_ratio)
+    x1 = max(0, x - pad_w)
+    y1 = max(0, y - pad_h)
+    x2 = min(iw, x + w + pad_w)
+    y2 = min(ih, y + h + pad_h)
+    bw, bh = x2 - x1, y2 - y1
+    if bh > bw:
+        diff = bh - bw
+        x1 = max(0, x1 - diff // 2)
+        x2 = min(iw, x2 + (diff - diff // 2))
+    elif bw > bh:
+        diff = bw - bh
+        y1 = max(0, y1 - diff // 2)
+        y2 = min(ih, y2 + (diff - diff // 2))
+    return img[y1:y2, x1:x2]
+
+
 # ── Response Models ─────────────────────────────────────────────────────────
 
 class PersonResponse(BaseModel):
@@ -341,17 +364,8 @@ def _scan_frame(img: np.ndarray) -> ScanResponse:
         person = db.get_person(best["person_id"])
         person_name = person["name"] if person else best["person_id"]
 
-        # Identity matched! Now crop the face and run AI detection.
-        x, y, w, h = area.get('x', 0), area.get('y', 0), area.get('w', 0), area.get('h', 0)
-
-        # Add some padding around the crop for better AI detection
-        pad = int(max(w, h) * 0.2)
-        img_h, img_w = img.shape[:2]
-        x1 = max(0, x - pad)
-        y1 = max(0, y - pad)
-        x2 = min(img_w, x + w + pad)
-        y2 = min(img_h, y + h + pad)
-        face_crop = img[y1:y2, x1:x2]
+        # Identity matched! Now crop the face with balanced portrait margin and run AI detection.
+        face_crop = _crop_portrait_face(img, area)
 
         ai_result = ai_detector.analyze(face_crop)
 
@@ -500,15 +514,8 @@ async def scan_video(file: UploadFile = File(...)):
                         person_ids_detected.add(pid)
                         print(f"[IDENTITY] Frame {frame_num}: {pid} similarity={sim:.4f}")
                         
-                        # Crop face for potential AI analysis later
-                        x, y, w, h = area.get('x', 0), area.get('y', 0), area.get('w', 0), area.get('h', 0)
-                        pad = int(max(w, h) * 0.2)
-                        img_h, img_w = frame_img.shape[:2]
-                        x1 = max(0, x - pad)
-                        y1 = max(0, y - pad)
-                        x2 = min(img_w, x + w + pad)
-                        y2 = min(img_h, y + h + pad)
-                        protected_face_crops.append(frame_img[y1:y2, x1:x2])
+                        # Crop face with balanced portrait margin for potential AI analysis later
+                        protected_face_crops.append(_crop_portrait_face(frame_img, area))
                     else:
                         print(f"[IDENTITY] Frame {frame_num}: no registered match")
             
@@ -569,13 +576,17 @@ async def scan_video(file: UploadFile = File(...)):
         frames_analyzed = len(total_ai_scores)
         flagged_ratio = flagged_frames_count / frames_analyzed if frames_analyzed else 0.0
         
-        # Calculate aggregate AI score (median)
+        # Calculate aggregate AI score using top-k weighted pooling
         if total_ai_scores:
-            aggregate_score = float(np.median(total_ai_scores))
+            k = max(1, (len(total_ai_scores) + 1) // 2)
+            top_k = sorted(total_ai_scores, reverse=True)[:k]
+            top_mean = float(np.mean(top_k))
+            overall_mean = float(np.mean(total_ai_scores))
+            aggregate_score = float(0.70 * top_mean + 0.30 * overall_mean)
         else:
             aggregate_score = 0.0
             
-        print(f"[VIDEO] AI analysis completed: {frames_analyzed} frames")
+        print(f"[VIDEO] AI analysis completed: {frames_analyzed} frames (aggregate: {aggregate_score:.4f})")
 
         # 6. Video Decision
         # Check if metadata forensics found strong AI markers
@@ -588,7 +599,14 @@ async def scan_video(file: UploadFile = File(...)):
             if meta_boost:
                 summary += " ⚠️ However, file metadata contains AI-generation markers."
         else:
-            if flagged_ratio >= 0.3 or (flagged_frames_count > 0 and aggregate_score >= config.AI_DETECTOR_THRESHOLD) or meta_boost:
+            ai_detected = (
+                meta_boost
+                or (flagged_frames_count >= 2)
+                or (flagged_frames_count >= 1 and aggregate_score >= 0.45)
+                or (flagged_ratio >= 0.20 and aggregate_score >= 0.35)
+                or (aggregate_score >= 0.50)
+            )
+            if ai_detected:
                 final_status = "POTENTIAL_AI_MANIPULATION"
                 ai_status = "POTENTIAL_AI_MANIPULATION"
                 reasons = []
@@ -596,11 +614,15 @@ async def scan_video(file: UploadFile = File(...)):
                     reasons.append(f"{flagged_frames_count} frames flagged by AI detector")
                 if meta_boost:
                     reasons.append("file metadata contains AI-generation markers")
-                summary = f"REVIEW REQUIRED: {', '.join(reasons)}."
+                summary = f"AI DETECTED: {', '.join(reasons)}."
+            elif flagged_frames_count > 0:
+                final_status = "REVIEW_REQUIRED"
+                ai_status = "REVIEW_REQUIRED"
+                summary = f"REVIEW REQUIRED: {flagged_frames_count} frame(s) flagged with ambiguous signals."
             else:
-                final_status = "REVIEW_REQUIRED" if flagged_frames_count > 0 else "NO_THREAT_DETECTED"
+                final_status = "NO_THREAT_DETECTED"
                 ai_status = "NO_STRONG_AI_EVIDENCE"
-                summary = f"CLEAR: Protected identity found in {frames_with_identity_count} frames. No strong evidence of manipulation."
+                summary = f"CLEAR: Protected identity found in {frames_with_identity_count} frames. No evidence of AI manipulation."
                 
         print(f"[VIDEO] Final status: {final_status}")
 

@@ -9,3 +9,4 @@ storage/
 *.exe
 .env
 .venv/
+scratch/

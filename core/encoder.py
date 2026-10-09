@@ -7,12 +7,22 @@ Uses DeepFace with RetinaFace detector and ArcFace model to:
 - Provide L2-normalized embeddings for FAISS cosine similarity search
 """
 
+import sys
+import os
+
+if sys.platform == 'win32' and hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+    try:
+        sys.stderr.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 import numpy as np
 import cv2
 from deepface import DeepFace
-
-import sys
-import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import config
 
@@ -89,8 +99,15 @@ def extract_faces(frame: np.ndarray, min_confidence: float = None) -> list:
     except Exception:
         return []
 
-    # Filter by confidence
-    return [f for f in faces if f.get("confidence", 0) >= min_confidence]
+    # Discard dummy whole-image crops or detections below confidence
+    valid_faces = [f for f in faces if float(f.get("confidence", 0) or 0) >= min_confidence]
+
+    # Sort faces by bounding box area descending so primary subject face comes first
+    valid_faces.sort(
+        key=lambda f: f.get("facial_area", {}).get("w", 0) * f.get("facial_area", {}).get("h", 0),
+        reverse=True
+    )
+    return valid_faces
 
 
 def generate_frame_embeddings(frame: np.ndarray) -> list:

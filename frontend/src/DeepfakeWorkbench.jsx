@@ -32,44 +32,41 @@ function getOutcome(item) {
   };
 
   const result = item?.result;
-  const analysis = result?.ai_analysis;
-  const analyzed = Number(analysis?.frames_analyzed) || 0;
-  const flagged = Number(analysis?.frames_flagged) || 0;
+  const scored = Number(result?.frames_scored ?? result?.ai_analysis?.frames_scored ?? result?.ai_analysis?.frames_analyzed) || 0;
+  const status = result?.final_status;
 
-  if (!result || analyzed === 0) return {
-    tone: 'inconclusive',
-    label: 'INCONCLUSIVE',
-    title: 'No video frames received an AI score',
-    detail: 'Swaraksha only runs its image classifier on frames matching a registered identity. This recording was not scored, so the result says nothing about whether it is synthetic.',
-  };
+  if (!result || scored === 0 || status === 'INCONCLUSIVE') {
+    return {
+      tone: 'inconclusive',
+      label: 'INCONCLUSIVE',
+      title: 'Inconclusive Analysis',
+      detail: result?.reason || result?.summary || 'The available evidence is insufficient for a reliable authenticity decision.',
+    };
+  }
 
-  if (result.final_status === 'POTENTIAL_AI_MANIPULATION' || flagged > 0 && result.final_status === 'REVIEW_REQUIRED') return {
-    tone: 'flagged',
-    label: result.final_status === 'POTENTIAL_AI_MANIPULATION' ? 'SIGNAL DETECTED' : 'REVIEW',
-    title: result.final_status === 'POTENTIAL_AI_MANIPULATION' ? 'Potential synthetic-media signal' : 'Some frames need review',
-    detail: `${flagged} of ${analyzed} analyzed frames were flagged by the image classifier. Treat this as screening evidence, not a definitive finding.`,
-  };
+  if (status === 'AI_GENERATED') {
+    return {
+      tone: 'flagged',
+      label: 'AI-GENERATED VIDEO',
+      title: 'AI-Generated Video Detected',
+      detail: result?.reason || result?.summary || 'Sufficient evidence supports synthetic or AI-manipulated visual content.',
+    };
+  }
 
-  const metadata = result.metadata_forensics;
-  if (analysis?.status === 'NO_STRONG_AI_EVIDENCE' && ['high', 'medium'].includes(String(metadata?.confidence).toLowerCase())) return {
-    tone: 'review',
-    label: 'METADATA REVIEW',
-    title: 'Container markers warrant a closer look',
-    detail: `${(metadata.flags || []).length} file-metadata finding(s) were reported. The image classifier did not flag the sampled face crops; metadata markers alone do not establish that a video is synthetic.`,
-  };
-
-  if (analysis?.status === 'NO_STRONG_AI_EVIDENCE') return {
-    tone: 'clear',
-    label: 'NO STRONG SIGNAL',
-    title: 'The sampled frames were not flagged',
-    detail: `The classifier did not flag ${analyzed} analyzed frame${analyzed === 1 ? '' : 's'}. Sampling can miss brief artifacts; this does not establish that the recording is authentic.`,
-  };
+  if (status === 'REAL_VIDEO') {
+    return {
+      tone: 'clear',
+      label: 'REAL VIDEO',
+      title: 'Authentic Real Video Detected',
+      detail: result?.reason || result?.summary || `All ${scored} analyzed frame(s) support authentic real video content with no synthetic manipulation.`,
+    };
+  }
 
   return {
     tone: 'inconclusive',
     label: 'INCONCLUSIVE',
-    title: 'The backend did not return a complete analysis',
-    detail: result.summary || 'No definitive video-level conclusion is available.',
+    title: 'Inconclusive Analysis',
+    detail: result?.reason || result?.summary || 'No definitive video-level conclusion is available.',
   };
 }
 
@@ -296,18 +293,56 @@ function App() {
 }
 
 function OutcomePanel({ outcome, result }) {
-  const analysis = result?.ai_analysis;
-  const hasScore = Number(analysis?.frames_analyzed) > 0 && Number.isFinite(Number(analysis?.aggregate_score));
-  const score = hasScore ? Math.round(Number(analysis.aggregate_score) * 100) : null;
+  const finalStatus = result?.final_status;
+  const isReal = finalStatus === 'REAL_VIDEO';
+  const isAi = finalStatus === 'AI_GENERATED';
+  const scored = Number(result?.frames_scored ?? result?.ai_analysis?.frames_scored ?? result?.ai_analysis?.frames_analyzed) || 0;
+
+  let scorePercent = null;
+  let captionTitle = 'CONFIDENCE';
+  let captionSub = 'MODEL VERDICT';
+
+  if (isReal && scored > 0) {
+    const prob = Number(result.real_probability ?? result.confidence);
+    scorePercent = Number.isFinite(prob) ? Math.round(prob * 100) : null;
+    captionTitle = 'REAL VIDEO CONFIDENCE';
+    captionSub = 'AUTHENTIC SIGNAL STRENGTH';
+  } else if (isAi && scored > 0) {
+    const prob = Number(result.ai_probability ?? result.confidence);
+    scorePercent = Number.isFinite(prob) ? Math.round(prob * 100) : null;
+    captionTitle = 'AI VIDEO CONFIDENCE';
+    captionSub = 'SYNTHETIC SIGNAL STRENGTH';
+  }
+
   return (
     <section className={`outcome-panel ${outcome.tone}`}>
       <div className="outcome-main">
         <p className="outcome-label"><span />{outcome.label}</p>
         <h2>{outcome.title}</h2>
         <p>{outcome.detail}</p>
+        {Array.isArray(result?.warnings) && result.warnings.length > 0 && (
+          <div className="outcome-warnings" style={{ marginTop: '0.6rem', fontSize: '0.85rem', opacity: 0.85 }}>
+            {result.warnings.map((w, i) => (
+              <p key={i}>⚠️ {w}</p>
+            ))}
+          </div>
+        )}
       </div>
       <div className="score-block">
-        {hasScore ? <><span className="score-value">{score}<small>%</small></span><span className="score-caption">AGGREGATE MODEL SCORE<br />NOT A CALIBRATED PROBABILITY</span></> : <><ShieldAlert size={24} strokeWidth={1.4} /><span className="score-caption">{outcome.tone === 'inconclusive' ? 'NO SCORE' : 'REVIEW REQUIRED'}</span></>}
+        {scorePercent !== null ? (
+          <>
+            <span className="score-value">{scorePercent}<small>%</small></span>
+            <span className="score-caption">
+              {captionTitle}<br />
+              {captionSub}
+            </span>
+          </>
+        ) : (
+          <>
+            <ShieldAlert size={24} strokeWidth={1.4} />
+            <span className="score-caption">{outcome.tone === 'inconclusive' ? 'INCONCLUSIVE' : 'NO SCORE'}</span>
+          </>
+        )}
       </div>
     </section>
   );
@@ -318,13 +353,14 @@ function AnalysisReport({ result, onSeek }) {
   const depth = result.depth_analysis || {};
   const temporal = result.temporal_analysis || {};
   const frames = Array.isArray(result.frames) ? result.frames : [];
-  const analyzed = Number(analysis.frames_analyzed) || 0;
+  const scored = Number(result.frames_scored ?? analysis.frames_scored ?? analysis.frames_analyzed) || 0;
+  const analyzed = Number(result.frames_analyzed ?? result.video?.sampled_frames) || scored;
   const flagged = Number(analysis.frames_flagged) || 0;
   const depthRegions = Number(depth.face_regions_analyzed) || 0;
   const persistentTracks = Number(temporal.persistent_tracks) || 0;
   const detectedTracks = Number(temporal.tracks_detected) || 0;
   const layers = [
-    { name: 'Sampled-frame classifier', state: analyzed ? `${analyzed} FRAMES SCORED` : 'NOT RUN', detail: 'Image model on detected face crops; no identity enrollment' },
+    { name: 'Sampled-frame classifier', state: scored ? `${scored} FRAMES SCORED` : 'NOT RUN', detail: 'Image model on detected face crops; no identity enrollment' },
     { name: 'File metadata', state: result.metadata_forensics?.confidence ? result.metadata_forensics.confidence.toUpperCase() : 'UNAVAILABLE', detail: 'Container metadata markers only' },
     {
       name: 'Face-region relative depth',
@@ -343,9 +379,9 @@ function AnalysisReport({ result, onSeek }) {
   return (
     <div className="report-body">
       <div className="metric-strip">
-        <Metric label="SAMPLED" value={result.video?.sampled_frames ?? '—'} suffix="frames" />
-        <Metric label="MODEL SCORED" value={analyzed} suffix="frames" />
-        <Metric label="FLAGGED" value={flagged} suffix={`of ${analyzed || '—'}`} />
+        <Metric label="SAMPLED" value={analyzed} suffix="frames" />
+        <Metric label="MODEL SCORED" value={scored} suffix="frames" />
+        <Metric label="FLAGGED" value={flagged} suffix={`of ${scored || '—'}`} />
         <Metric label="DURATION" value={formatTime(result.video?.duration)} suffix="min:sec" />
       </div>
 

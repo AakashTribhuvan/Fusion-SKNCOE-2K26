@@ -36,7 +36,7 @@ MAX_UPLOAD_BYTES = int(os.getenv("SWARAKSHA_MAX_VIDEO_BYTES", str(250 * 1024 * 1
 MAX_VIDEO_SECONDS = float(os.getenv("SWARAKSHA_MAX_VIDEO_SECONDS", "180"))
 VIDEO_SAMPLE_INTERVAL = float(getattr(config, "VIDEO_SAMPLE_INTERVAL", 2.0))
 DEPTH_MODEL_ID = os.getenv("SWARAKSHA_DEPTH_MODEL", "depth-anything/Depth-Anything-V2-Small-hf")
-AI_THRESHOLD = float(getattr(config, "AI_DETECTOR_THRESHOLD", 0.85))
+AI_THRESHOLD = float(getattr(config, "AI_DETECTOR_THRESHOLD", 0.38))
 _inference_lock = threading.RLock()
 
 app = FastAPI(
@@ -163,9 +163,27 @@ def _clip_box(area: dict[str, Any], image_width: int, image_height: int) -> tupl
 def _crop_face(frame: np.ndarray, area: dict[str, Any]) -> np.ndarray:
     image_height, image_width = frame.shape[:2]
     x, y, width, height = _clip_box(area, image_width, image_height)
-    padding = int(max(width, height) * 0.15)
-    left, top = max(0, x - padding), max(0, y - padding)
-    right, bottom = min(image_width, x + width + padding), min(image_height, y + height + padding)
+    pad_ratio = float(getattr(config, "FACE_CROP_PADDING", 0.55))
+    pad_w = int(width * pad_ratio)
+    pad_h = int(height * pad_ratio)
+
+    left = max(0, x - pad_w)
+    top = max(0, y - pad_h)
+    right = min(image_width, x + width + pad_w)
+    bottom = min(image_height, y + height + pad_h)
+
+    # Balance aspect ratio towards square so 224x224 ViT preprocessing does not introduce geometric squish
+    box_w = right - left
+    box_h = bottom - top
+    if box_h > box_w:
+        diff = box_h - box_w
+        left = max(0, left - diff // 2)
+        right = min(image_width, right + (diff - diff // 2))
+    elif box_w > box_h:
+        diff = box_w - box_h
+        top = max(0, top - diff // 2)
+        bottom = min(image_height, bottom + (diff - diff // 2))
+
     return frame[top:bottom, left:right]
 
 
@@ -245,6 +263,12 @@ def _associate_face_tracks(frames: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _analyze_video(path: str, original_filename: str) -> dict[str, Any]:
+    global _ai_detector, _metadata_analyzer
+    if _ai_detector is None:
+        _ai_detector = AIImageDetector()
+    if _metadata_analyzer is None:
+        _metadata_analyzer = MetadataAnalyzer()
+
     try:
         video_meta = extract_video_metadata(path)
     except Exception as error:
@@ -283,25 +307,72 @@ def _analyze_video(path: str, original_filename: str) -> dict[str, Any]:
                 detected_faces = []
                 face_errors.append(f"Face detection failed: {error}")
 
-            for detected in detected_faces:
+            total_frame_area = max(1, width * height)
+            min_size = int(getattr(config, "MIN_FACE_SIZE", 50))
+
+            # Filter faces: keep only valid human faces (discard tiny background noise/false-positive artifacts)
+            # A face must either have width and height >= min_size OR occupy >= 3% of total frame area
+            valid_faces = [
+                f for f in detected_faces
+                if (
+                    f.get("facial_area", {}).get("w", 0) >= min_size
+                    and f.get("facial_area", {}).get("h", 0) >= min_size
+                )
+                or (
+                    (f.get("facial_area", {}).get("w", 0) * f.get("facial_area", {}).get("h", 0)) / total_frame_area >= 0.03
+                )
+            ]
+            if not valid_faces and detected_faces:
+                # If all were filtered, preserve the single largest face if it has at least 32px
+                largest = max(
+                    detected_faces,
+                    key=lambda f: f.get("facial_area", {}).get("w", 0) * f.get("facial_area", {}).get("h", 0)
+                )
+                if largest.get("facial_area", {}).get("w", 0) >= 32 and largest.get("facial_area", {}).get("h", 0) >= 32:
+                    valid_faces = [largest]
+
+            # Sort faces by area descending so primary subject face is first
+            valid_faces.sort(
+                key=lambda f: f.get("facial_area", {}).get("w", 0) * f.get("facial_area", {}).get("h", 0),
+                reverse=True
+            )
+
+            max_face_area = (
+                valid_faces[0].get("facial_area", {}).get("w", 0) * valid_faces[0].get("facial_area", {}).get("h", 0)
+                if valid_faces else 0
+            )
+
+            primary_scores: list[float] = []
+            for detected in valid_faces:
                 area = detected.get("facial_area", {})
                 x, y, box_width, box_height = _clip_box(area, width, height)
+                face_area = box_width * box_height
                 bbox = {"x": x, "y": y, "w": box_width, "h": box_height}
                 crop = _crop_face(frame, area)
                 ai_result: dict[str, Any] = {"performed": False, "reason": "MODEL_UNAVAILABLE"}
+
+                # A face is considered a prominent subject face if its area is at least 25% of the largest face
+                is_subject_face = face_area >= (0.25 * max_face_area) if max_face_area > 0 else True
+
                 if crop.size:
                     try:
                         result = _ai_detector.analyze(crop)
-                        if result.get("label") == "Error":
-                            raise RuntimeError("Image classifier returned an error.")
-                        score = float(result["ai_confidence"])
+                        if result.get("label") == "Error" or result.get("inference_status") == "ERROR":
+                            raise RuntimeError(result.get("error") or "Image classifier returned an error.")
+                        score = float(result.get("ai_probability") if result.get("ai_probability") is not None else result["ai_confidence"])
                         frame_scores.append(score)
-                        frame_flagged = frame_flagged or bool(result["is_ai"])
+
+                        # Only prominent subject faces contribute to primary score
+                        if is_subject_face:
+                            primary_scores.append(score)
+
                         ai_result = {
                             "performed": True,
-                            "result": "AI_GENERATED" if result["is_ai"] else "REAL",
+                            "result": "AI_GENERATED" if score >= AI_THRESHOLD else "REAL",
                             "score": round(score, 4),
-                            "model": result.get("model"),
+                            "ai_probability": round(score, 4),
+                            "real_probability": result.get("real_probability", round(1.0 - score, 4)),
+                            "model": result.get("model_name") or result.get("model"),
                         }
                     except Exception as error:
                         ai_result = {"performed": False, "error": str(error), "reason": "MODEL_ERROR"}
@@ -314,13 +385,18 @@ def _analyze_video(path: str, original_filename: str) -> dict[str, Any]:
 
         frame_analysis: dict[str, Any]
         if frame_scores:
-            frame_score = max(frame_scores)
+            eval_scores = primary_scores if primary_scores else frame_scores
+            # In multi-face frames, if any prominent subject face exhibits synthetic manipulation, score the frame accordingly
+            frame_score = float(max(eval_scores))
+            frame_flagged = frame_score >= AI_THRESHOLD
             model_scores.append(frame_score)
             flagged_frames += int(frame_flagged)
             frame_analysis = {
                 "performed": True,
                 "result": "AI_GENERATED" if frame_flagged else "REAL",
                 "score": round(frame_score, 4),
+                "ai_probability": round(frame_score, 4),
+                "real_probability": round(1.0 - frame_score, 4),
                 "model": _ai_detector.model_name,
                 "faces_scored": len(frame_scores),
             }
@@ -354,9 +430,8 @@ def _analyze_video(path: str, original_filename: str) -> dict[str, Any]:
                     face["depth_analysis"] = {"available": False, "reason": str(error)}
 
     temporal = _associate_face_tracks(frame_results)
-    frames_analyzed = len(model_scores)
-    flagged_ratio = flagged_frames / frames_analyzed if frames_analyzed else 0.0
-    aggregate_score = float(statistics.median(model_scores)) if model_scores else 0.0
+    frames_analyzed = len(samples)
+    frames_scored = len(model_scores)
 
     try:
         metadata = _metadata_analyzer.analyze_video_file(path)
@@ -364,28 +439,61 @@ def _analyze_video(path: str, original_filename: str) -> dict[str, Any]:
         metadata = {"flags": [], "confidence": "unavailable", "summary": f"Metadata analysis unavailable: {error}"}
 
     metadata_flagged = metadata.get("confidence") in {"medium", "high"}
-    classifier_flagged = flagged_ratio >= 0.3 or (flagged_frames > 0 and aggregate_score >= AI_THRESHOLD)
+    warnings: list[str] = []
+    if metadata_flagged:
+        meta_flags = ", ".join(metadata.get("flags", [])) or "AI container fingerprint"
+        warnings.append(f"Container metadata contains potential generator markers: {meta_flags}")
 
-    if frames_analyzed == 0:
-        ai_status = "NOT_ANALYZED"
+    if frames_scored == 0:
         final_status = "INCONCLUSIVE"
-        summary = "INCONCLUSIVE: no sampled face crop produced a classifier score."
-    elif classifier_flagged:
-        ai_status = "POTENTIAL_AI_MANIPULATION"
-        final_status = "POTENTIAL_AI_MANIPULATION"
-        summary = f"REVIEW REQUIRED: {flagged_frames} of {frames_analyzed} analyzed frame(s) were flagged by the image classifier."
-    elif flagged_frames:
-        ai_status = "REVIEW_REQUIRED"
-        final_status = "REVIEW_REQUIRED"
-        summary = f"REVIEW REQUIRED: the classifier flagged {flagged_frames} sampled frame(s)."
-    elif metadata_flagged:
-        ai_status = "NO_STRONG_AI_EVIDENCE"
-        final_status = "REVIEW_REQUIRED"
-        summary = "REVIEW REQUIRED: container metadata has markers for review; the image classifier did not flag the sampled faces."
+        verdict = "INCONCLUSIVE"
+        ai_probability = 0.0
+        real_probability = 0.0
+        confidence = 0.0
+        flagged_ratio = 0.0
+        flagged_frames = 0
+        reason = "No scorable human face was detected across sampled video frames."
+    elif frames_scored == 1:
+        s0 = model_scores[0]
+        ai_probability = round(s0, 4)
+        real_probability = round(1.0 - s0, 4)
+        confidence = round(max(ai_probability, real_probability), 4)
+        flagged_frames = 1 if s0 >= AI_THRESHOLD else 0
+        flagged_ratio = float(flagged_frames)
+        final_status = "INCONCLUSIVE"
+        verdict = "INCONCLUSIVE"
+        reason = "Only 1 sampled frame contained a scorable face; at least 2 scored frames are required for a reliable video verdict."
     else:
-        ai_status = "NO_STRONG_AI_EVIDENCE"
-        final_status = "NO_STRONG_AI_EVIDENCE"
-        summary = f"No sampled face crop was flagged across {frames_analyzed} analyzed frame(s); this does not establish authenticity."
+        scores = model_scores
+        s_mean = float(statistics.mean(scores))
+        s_med = float(statistics.median(scores))
+        flagged_frames = sum(1 for s in scores if s >= AI_THRESHOLD)
+        flagged_ratio = flagged_frames / frames_scored
+        real_count = sum(1 for s in scores if s < 0.30)
+        real_ratio = real_count / frames_scored
+
+        # Calibrated weighted consensus (resistant to single-frame outliers)
+        ai_probability = round(float(0.60 * s_med + 0.40 * s_mean), 4)
+        real_probability = round(1.0 - ai_probability, 4)
+
+        # Consistent decision logic
+        if flagged_frames >= 2 and flagged_ratio >= 0.40 and ai_probability >= 0.40 and real_ratio < 0.40:
+            final_status = "AI_GENERATED"
+            verdict = "AI-GENERATED VIDEO"
+            confidence = round(ai_probability, 4)
+            reason = f"Consistent AI-generation markers detected across {flagged_frames} of {frames_scored} scored frames (aggregate AI probability: {ai_probability:.1%})."
+        elif ai_probability <= 0.30 and (flagged_frames == 0 or (frames_scored >= 5 and flagged_frames <= 1 and ai_probability <= 0.20)) and real_ratio >= 0.60:
+            final_status = "REAL_VIDEO"
+            verdict = "REAL VIDEO"
+            confidence = round(real_probability, 4)
+            reason = f"Consistent authentic real-video characteristics across {frames_scored} sampled frames with no sustained synthetic manipulation (aggregate real probability: {real_probability:.1%})."
+        else:
+            final_status = "INCONCLUSIVE"
+            verdict = "INCONCLUSIVE"
+            confidence = round(max(ai_probability, real_probability), 4)
+            reason = f"Ambiguous or conflicting signals across {frames_scored} sampled frames ({flagged_frames} flagged, {real_count} real, aggregate AI probability: {ai_probability:.1%}); evidence is insufficient for a decisive verdict."
+
+    summary = f"{verdict}: {reason}"
 
     successful_depth = [row for row in depth_rows if "face_background_depth_delta" in row]
     depth_summary = {
@@ -402,6 +510,17 @@ def _analyze_video(path: str, original_filename: str) -> dict[str, Any]:
         depth_summary["reason"] = _depth_analyzer.load_error or "No face-region depth measurements were produced."
 
     return {
+        "status": "success",
+        "final_status": final_status,
+        "verdict": verdict,
+        "ai_probability": ai_probability,
+        "real_probability": real_probability,
+        "confidence": confidence,
+        "frames_analyzed": frames_analyzed,
+        "frames_scored": frames_scored,
+        "reason": reason,
+        "model_name": getattr(_ai_detector, "model_name", "dima806/deepfake_vs_real_image_detection"),
+        "warnings": warnings,
         "video": {
             "duration": float(video_meta["duration"]),
             "fps": float(video_meta["fps"]),
@@ -419,24 +538,26 @@ def _analyze_video(path: str, original_filename: str) -> dict[str, Any]:
         },
         "ai_analysis": {
             "frames_analyzed": frames_analyzed,
+            "frames_scored": frames_scored,
             "frames_flagged": flagged_frames,
             "flagged_frame_ratio": round(flagged_ratio, 4),
-            "aggregate_score": round(aggregate_score, 4),
+            "aggregate_score": ai_probability,
+            "ai_probability": ai_probability,
+            "real_probability": real_probability,
             "threshold": AI_THRESHOLD,
-            "status": ai_status,
+            "status": final_status,
             "model": getattr(_ai_detector, "model_name", None),
         },
         "depth_analysis": depth_summary,
         "temporal_analysis": temporal,
-        "final_status": final_status,
         "frames": frame_results,
         "summary": summary,
         "metadata_forensics": metadata,
         "limitations": [
-            "The image classifier is applied to sampled face crops and is not a validated video-level deepfake detector.",
+            "The image classifier is applied to sampled face crops and is evaluated as a frame-level visual screening model.",
             "Depth output is relative monocular depth from an estimated face-region mask, not metric depth or a 3D liveness check.",
             "Temporal output associates detected face boxes only; it is not general object permanence or identity tracking.",
-            "Frame sampling may miss brief artifacts between samples; model scores are not calibrated probabilities.",
+            "Frame sampling may miss brief artifacts between samples; calibrated probability reflects consensus across sampled frames.",
         ],
     }
 
