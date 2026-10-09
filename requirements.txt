@@ -15,3 +15,6 @@ silero-vad==6.2.0
 av==18.1.0
 torch==2.5.1
 torchaudio==2.5.1
+transformers>=4.46.0,<4.47.0
+matplotlib>=3.9.0
+

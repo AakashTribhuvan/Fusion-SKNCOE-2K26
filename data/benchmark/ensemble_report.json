@@ -1,0 +1,384 @@
+{
+  "manifest_path": "e:\\voice model\\data\\benchmark\\manifest.csv",
+  "total_evaluated": 20,
+  "total_failures": 0,
+  "ensemble_metrics": {
+    "confusion_matrix": {
+      "true_spoof_detected (TP)": 10,
+      "false_alarm_genuine_rejected (FP)": 0,
+      "missed_spoof_accepted (FN)": 0,
+      "true_genuine_accepted (TN)": 10
+    },
+    "false_acceptance_rate_far": 0.0,
+    "false_rejection_rate_frr": 0.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "accuracy": 1.0,
+    "eer": 0.0,
+    "eer_threshold": 81.41
+  },
+  "model_b_aasist_metrics": {
+    "confusion_matrix": {
+      "true_spoof_detected (TP)": 10,
+      "false_alarm_genuine_rejected (FP)": 10,
+      "missed_spoof_accepted (FN)": 0,
+      "true_genuine_accepted (TN)": 0
+    },
+    "false_acceptance_rate_far": 0.0,
+    "false_rejection_rate_frr": 1.0,
+    "precision": 0.5,
+    "recall": 1.0,
+    "accuracy": 0.5,
+    "eer": 0.65,
+    "eer_threshold": 98.7
+  },
+  "model_c_wav2vec2_metrics": {
+    "confusion_matrix": {
+      "true_spoof_detected (TP)": 10,
+      "false_alarm_genuine_rejected (FP)": 0,
+      "missed_spoof_accepted (FN)": 0,
+      "true_genuine_accepted (TN)": 10
+    },
+    "false_acceptance_rate_far": 0.0,
+    "false_rejection_rate_frr": 0.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "accuracy": 1.0,
+    "eer": 0.0,
+    "eer_threshold": 86.12
+  },
+  "source_breakdown": {
+    "youtube_human": {
+      "total": 10,
+      "detected_spoof": 0,
+      "detected_genuine": 10
+    },
+    "elevenlabs_clone": {
+      "total": 10,
+      "detected_spoof": 10,
+      "detected_genuine": 0
+    }
+  },
+  "sample_results": [
+    {
+      "file_path": "E:\\voice model\\data\\benchmark\\audio\\real_yt_0000_p2_part_167.flac",
+      "ground_truth": "BONA_FIDE",
+      "source_type": "youtube_human",
+      "ensemble_spoof_risk": 56.08,
+      "decision_band": "LOWER_MODEL_ESTIMATED_SPOOF_RISK",
+      "predicted_class": 0,
+      "latency_ms": 8205.89,
+      "is_degraded": true,
+      "models": {
+        "model_a_w2v2_aasist": "unavailable",
+        "model_b_aasist_score": 99.78,
+        "model_c_wav2vec2_score": 0.12
+      },
+      "heuristics_score": 30.0
+    },
+    {
+      "file_path": "E:\\voice model\\data\\benchmark\\audio\\real_yt_0000_part_001.flac",
+      "ground_truth": "BONA_FIDE",
+      "source_type": "youtube_human",
+      "ensemble_spoof_risk": 55.93,
+      "decision_band": "LOWER_MODEL_ESTIMATED_SPOOF_RISK",
+      "predicted_class": 0,
+      "latency_ms": 2233.74,
+      "is_degraded": true,
+      "models": {
+        "model_a_w2v2_aasist": "unavailable",
+        "model_b_aasist_score": 99.47,
+        "model_c_wav2vec2_score": 0.16
+      },
+      "heuristics_score": 30.0
+    },
+    {
+      "file_path": "E:\\voice model\\data\\benchmark\\audio\\real_yt_0000_part_002.flac",
+      "ground_truth": "BONA_FIDE",
+      "source_type": "youtube_human",
+      "ensemble_spoof_risk": 56.18,
+      "decision_band": "LOWER_MODEL_ESTIMATED_SPOOF_RISK",
+      "predicted_class": 0,
+      "latency_ms": 2451.83,
+      "is_degraded": true,
+      "models": {
+        "model_a_w2v2_aasist": "unavailable",
+        "model_b_aasist_score": 99.95,
+        "model_c_wav2vec2_score": 0.13
+      },
+      "heuristics_score": 30.0
+    },
+    {
+      "file_path": "E:\\voice model\\data\\benchmark\\audio\\real_yt_0000_part_003.flac",
+      "ground_truth": "BONA_FIDE",
+      "source_type": "youtube_human",
+      "ensemble_spoof_risk": 52.46,
+      "decision_band": "LOWER_MODEL_ESTIMATED_SPOOF_RISK",
+      "predicted_class": 0,
+      "latency_ms": 2041.47,
+      "is_degraded": true,
+      "models": {
+        "model_a_w2v2_aasist": "unavailable",
+        "model_b_aasist_score": 93.05,
+        "model_c_wav2vec2_score": 0.12
+      },
+      "heuristics_score": 30.0
+    },
+    {
+      "file_path": "E:\\voice model\\data\\benchmark\\audio\\real_yt_0000_part_004.flac",
+      "ground_truth": "BONA_FIDE",
+      "source_type": "youtube_human",
+      "ensemble_spoof_risk": 56.09,
+      "decision_band": "LOWER_MODEL_ESTIMATED_SPOOF_RISK",
+      "predicted_class": 0,
+      "latency_ms": 2125.3,
+      "is_degraded": true,
+      "models": {
+        "model_a_w2v2_aasist": "unavailable",
+        "model_b_aasist_score": 99.78,
+        "model_c_wav2vec2_score": 0.13
+      },
+      "heuristics_score": 30.0
+    },
+    {
+      "file_path": "E:\\voice model\\data\\benchmark\\audio\\real_yt_0000_part_005.flac",
+      "ground_truth": "BONA_FIDE",
+      "source_type": "youtube_human",
+      "ensemble_spoof_risk": 55.51,
+      "decision_band": "LOWER_MODEL_ESTIMATED_SPOOF_RISK",
+      "predicted_class": 0,
+      "latency_ms": 3718.4,
+      "is_degraded": true,
+      "models": {
+        "model_a_w2v2_aasist": "unavailable",
+        "model_b_aasist_score": 98.7,
+        "model_c_wav2vec2_score": 0.14
+      },
+      "heuristics_score": 30.0
+    },
+    {
+      "file_path": "E:\\voice model\\data\\benchmark\\audio\\real_yt_0000_part_008.flac",
+      "ground_truth": "BONA_FIDE",
+      "source_type": "youtube_human",
+      "ensemble_spoof_risk": 56.06,
+      "decision_band": "LOWER_MODEL_ESTIMATED_SPOOF_RISK",
+      "predicted_class": 0,
+      "latency_ms": 2793.02,
+      "is_degraded": true,
+      "models": {
+        "model_a_w2v2_aasist": "unavailable",
+        "model_b_aasist_score": 99.73,
+        "model_c_wav2vec2_score": 0.13
+      },
+      "heuristics_score": 30.0
+    },
+    {
+      "file_path": "E:\\voice model\\data\\benchmark\\audio\\real_yt_0000_part_010.flac",
+      "ground_truth": "BONA_FIDE",
+      "source_type": "youtube_human",
+      "ensemble_spoof_risk": 55.28,
+      "decision_band": "LOWER_MODEL_ESTIMATED_SPOOF_RISK",
+      "predicted_class": 0,
+      "latency_ms": 1649.36,
+      "is_degraded": true,
+      "models": {
+        "model_a_w2v2_aasist": "unavailable",
+        "model_b_aasist_score": 98.3,
+        "model_c_wav2vec2_score": 0.12
+      },
+      "heuristics_score": 30.0
+    },
+    {
+      "file_path": "E:\\voice model\\data\\benchmark\\audio\\real_yt_0000_part_011.flac",
+      "ground_truth": "BONA_FIDE",
+      "source_type": "youtube_human",
+      "ensemble_spoof_risk": 52.7,
+      "decision_band": "LOWER_MODEL_ESTIMATED_SPOOF_RISK",
+      "predicted_class": 0,
+      "latency_ms": 1719.15,
+      "is_degraded": true,
+      "models": {
+        "model_a_w2v2_aasist": "unavailable",
+        "model_b_aasist_score": 93.5,
+        "model_c_wav2vec2_score": 0.12
+      },
+      "heuristics_score": 30.0
+    },
+    {
+      "file_path": "E:\\voice model\\data\\benchmark\\audio\\real_yt_0000_part_013.flac",
+      "ground_truth": "BONA_FIDE",
+      "source_type": "youtube_human",
+      "ensemble_spoof_risk": 55.5,
+      "decision_band": "LOWER_MODEL_ESTIMATED_SPOOF_RISK",
+      "predicted_class": 0,
+      "latency_ms": 1953.78,
+      "is_degraded": true,
+      "models": {
+        "model_a_w2v2_aasist": "unavailable",
+        "model_b_aasist_score": 98.7,
+        "model_c_wav2vec2_score": 0.13
+      },
+      "heuristics_score": 30.0
+    },
+    {
+      "file_path": "E:\\voice model\\data\\benchmark\\audio\\fake_el_0001_c_part_002.flac",
+      "ground_truth": "SPOOF",
+      "source_type": "elevenlabs_clone",
+      "ensemble_spoof_risk": 87.68,
+      "decision_band": "HIGH_SPOOF_RISK_REVIEW",
+      "predicted_class": 1,
+      "latency_ms": 1770.44,
+      "is_degraded": true,
+      "models": {
+        "model_a_w2v2_aasist": "unavailable",
+        "model_b_aasist_score": 87.4,
+        "model_c_wav2vec2_score": 99.6
+      },
+      "heuristics_score": 30.0
+    },
+    {
+      "file_path": "E:\\voice model\\data\\benchmark\\audio\\fake_el_0001_c_part_003.flac",
+      "ground_truth": "SPOOF",
+      "source_type": "elevenlabs_clone",
+      "ensemble_spoof_risk": 85.39,
+      "decision_band": "HIGH_SPOOF_RISK_REVIEW",
+      "predicted_class": 1,
+      "latency_ms": 1586.78,
+      "is_degraded": true,
+      "models": {
+        "model_a_w2v2_aasist": "unavailable",
+        "model_b_aasist_score": 83.19,
+        "model_c_wav2vec2_score": 99.56
+      },
+      "heuristics_score": 30.0
+    },
+    {
+      "file_path": "E:\\voice model\\data\\benchmark\\audio\\fake_el_0001_c_part_004.flac",
+      "ground_truth": "SPOOF",
+      "source_type": "elevenlabs_clone",
+      "ensemble_spoof_risk": 81.41,
+      "decision_band": "HIGH_SPOOF_RISK_REVIEW",
+      "predicted_class": 1,
+      "latency_ms": 1647.44,
+      "is_degraded": true,
+      "models": {
+        "model_a_w2v2_aasist": "unavailable",
+        "model_b_aasist_score": 75.75,
+        "model_c_wav2vec2_score": 99.62
+      },
+      "heuristics_score": 30.0
+    },
+    {
+      "file_path": "E:\\voice model\\data\\benchmark\\audio\\fake_el_0001_c_part_005.flac",
+      "ground_truth": "SPOOF",
+      "source_type": "elevenlabs_clone",
+      "ensemble_spoof_risk": 87.01,
+      "decision_band": "HIGH_SPOOF_RISK_REVIEW",
+      "predicted_class": 1,
+      "latency_ms": 1657.11,
+      "is_degraded": true,
+      "models": {
+        "model_a_w2v2_aasist": "unavailable",
+        "model_b_aasist_score": 86.09,
+        "model_c_wav2vec2_score": 99.7
+      },
+      "heuristics_score": 30.0
+    },
+    {
+      "file_path": "E:\\voice model\\data\\benchmark\\audio\\fake_el_0001_part_001.flac",
+      "ground_truth": "SPOOF",
+      "source_type": "elevenlabs_clone",
+      "ensemble_spoof_risk": 91.38,
+      "decision_band": "HIGH_SPOOF_RISK_REVIEW",
+      "predicted_class": 1,
+      "latency_ms": 1882.31,
+      "is_degraded": true,
+      "models": {
+        "model_a_w2v2_aasist": "unavailable",
+        "model_b_aasist_score": 94.25,
+        "model_c_wav2vec2_score": 99.63
+      },
+      "heuristics_score": 30.0
+    },
+    {
+      "file_path": "E:\\voice model\\data\\benchmark\\audio\\fake_el_0002_c_part_001.flac",
+      "ground_truth": "SPOOF",
+      "source_type": "elevenlabs_clone",
+      "ensemble_spoof_risk": 94.47,
+      "decision_band": "HIGH_SPOOF_RISK_REVIEW",
+      "predicted_class": 1,
+      "latency_ms": 1517.18,
+      "is_degraded": true,
+      "models": {
+        "model_a_w2v2_aasist": "unavailable",
+        "model_b_aasist_score": 99.98,
+        "model_c_wav2vec2_score": 99.66
+      },
+      "heuristics_score": 30.0
+    },
+    {
+      "file_path": "E:\\voice model\\data\\benchmark\\audio\\fake_el_0003_c_part_004.flac",
+      "ground_truth": "SPOOF",
+      "source_type": "elevenlabs_clone",
+      "ensemble_spoof_risk": 85.79,
+      "decision_band": "HIGH_SPOOF_RISK_REVIEW",
+      "predicted_class": 1,
+      "latency_ms": 1658.75,
+      "is_degraded": true,
+      "models": {
+        "model_a_w2v2_aasist": "unavailable",
+        "model_b_aasist_score": 93.53,
+        "model_c_wav2vec2_score": 86.12
+      },
+      "heuristics_score": 30.0
+    },
+    {
+      "file_path": "E:\\voice model\\data\\benchmark\\audio\\fake_el_0003_part_001.flac",
+      "ground_truth": "SPOOF",
+      "source_type": "elevenlabs_clone",
+      "ensemble_spoof_risk": 94.09,
+      "decision_band": "HIGH_SPOOF_RISK_REVIEW",
+      "predicted_class": 1,
+      "latency_ms": 1444.44,
+      "is_degraded": true,
+      "models": {
+        "model_a_w2v2_aasist": "unavailable",
+        "model_b_aasist_score": 99.96,
+        "model_c_wav2vec2_score": 98.69
+      },
+      "heuristics_score": 30.0
+    },
+    {
+      "file_path": "E:\\voice model\\data\\benchmark\\audio\\fake_el_0003_part_002.flac",
+      "ground_truth": "SPOOF",
+      "source_type": "elevenlabs_clone",
+      "ensemble_spoof_risk": 89.69,
+      "decision_band": "HIGH_SPOOF_RISK_REVIEW",
+      "predicted_class": 1,
+      "latency_ms": 1593.66,
+      "is_degraded": true,
+      "models": {
+        "model_a_w2v2_aasist": "unavailable",
+        "model_b_aasist_score": 99.93,
+        "model_c_wav2vec2_score": 87.28
+      },
+      "heuristics_score": 30.0
+    },
+    {
+      "file_path": "E:\\voice model\\data\\benchmark\\audio\\fake_el_0003_part_003.flac",
+      "ground_truth": "SPOOF",
+      "source_type": "elevenlabs_clone",
+      "ensemble_spoof_risk": 93.34,
+      "decision_band": "HIGH_SPOOF_RISK_REVIEW",
+      "predicted_class": 1,
+      "latency_ms": 1722.46,
+      "is_degraded": true,
+      "models": {
+        "model_a_w2v2_aasist": "unavailable",
+        "model_b_aasist_score": 99.83,
+        "model_c_wav2vec2_score": 93.93
+      },
+      "heuristics_score": 45.0
+    }
+  ]
+}

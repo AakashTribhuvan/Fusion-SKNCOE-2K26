@@ -1,0 +1,257 @@
+{
+  "manifest_path": "E:\\voice model\\data\\benchmark\\manifest.csv",
+  "total_rows": 20,
+  "total_evaluated": 20,
+  "inference_failures": 0,
+  "confusion_matrix": {
+    "true_positive_bonafide": 0,
+    "true_negative_spoof": 10,
+    "false_positive_false_acceptance": 0,
+    "false_negative_false_rejection": 10
+  },
+  "metrics": {
+    "false_acceptance_rate_far": 0.0,
+    "false_rejection_rate_frr": 1.0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "accuracy": 0.5,
+    "equal_error_rate_eer": 0.6,
+    "average_latency_ms": 350.35
+  },
+  "source_breakdown": {
+    "youtube_human": {
+      "total": 10,
+      "correct": 0,
+      "false_accepts": 0,
+      "false_rejects": 10
+    },
+    "elevenlabs_clone": {
+      "total": 10,
+      "correct": 10,
+      "false_accepts": 0,
+      "false_rejects": 0
+    }
+  },
+  "sample_results": [
+    {
+      "row": 2,
+      "file": "audio/real_yt_0000_p2_part_167.flac",
+      "ground_truth": "BONAFIDE",
+      "source_type": "youtube_human",
+      "speaker_id": "yt_0000_p2",
+      "raw_score": -6.06781,
+      "predicted_class": "MODEL_PREDICTS_SPOOF",
+      "latency_ms": 149.567,
+      "status": "completed"
+    },
+    {
+      "row": 3,
+      "file": "audio/real_yt_0000_part_001.flac",
+      "ground_truth": "BONAFIDE",
+      "source_type": "youtube_human",
+      "speaker_id": "yt_0000",
+      "raw_score": -5.27404,
+      "predicted_class": "MODEL_PREDICTS_SPOOF",
+      "latency_ms": 134.878,
+      "status": "completed"
+    },
+    {
+      "row": 4,
+      "file": "audio/real_yt_0000_part_002.flac",
+      "ground_truth": "BONAFIDE",
+      "source_type": "youtube_human",
+      "speaker_id": "yt_0000",
+      "raw_score": -7.6641,
+      "predicted_class": "MODEL_PREDICTS_SPOOF",
+      "latency_ms": 135.367,
+      "status": "completed"
+    },
+    {
+      "row": 5,
+      "file": "audio/real_yt_0000_part_003.flac",
+      "ground_truth": "BONAFIDE",
+      "source_type": "youtube_human",
+      "speaker_id": "yt_0000",
+      "raw_score": -2.61281,
+      "predicted_class": "MODEL_PREDICTS_SPOOF",
+      "latency_ms": 133.431,
+      "status": "completed"
+    },
+    {
+      "row": 6,
+      "file": "audio/real_yt_0000_part_004.flac",
+      "ground_truth": "BONAFIDE",
+      "source_type": "youtube_human",
+      "speaker_id": "yt_0000",
+      "raw_score": -6.1772,
+      "predicted_class": "MODEL_PREDICTS_SPOOF",
+      "latency_ms": 376.122,
+      "status": "completed"
+    },
+    {
+      "row": 7,
+      "file": "audio/real_yt_0000_part_005.flac",
+      "ground_truth": "BONAFIDE",
+      "source_type": "youtube_human",
+      "speaker_id": "yt_0000",
+      "raw_score": -4.33493,
+      "predicted_class": "MODEL_PREDICTS_SPOOF",
+      "latency_ms": 395.728,
+      "status": "completed"
+    },
+    {
+      "row": 8,
+      "file": "audio/real_yt_0000_part_008.flac",
+      "ground_truth": "BONAFIDE",
+      "source_type": "youtube_human",
+      "speaker_id": "yt_0000",
+      "raw_score": -5.83603,
+      "predicted_class": "MODEL_PREDICTS_SPOOF",
+      "latency_ms": 412.347,
+      "status": "completed"
+    },
+    {
+      "row": 9,
+      "file": "audio/real_yt_0000_part_010.flac",
+      "ground_truth": "BONAFIDE",
+      "source_type": "youtube_human",
+      "speaker_id": "yt_0000",
+      "raw_score": -4.37562,
+      "predicted_class": "MODEL_PREDICTS_SPOOF",
+      "latency_ms": 387.776,
+      "status": "completed"
+    },
+    {
+      "row": 10,
+      "file": "audio/real_yt_0000_part_011.flac",
+      "ground_truth": "BONAFIDE",
+      "source_type": "youtube_human",
+      "speaker_id": "yt_0000",
+      "raw_score": -2.72818,
+      "predicted_class": "MODEL_PREDICTS_SPOOF",
+      "latency_ms": 396.334,
+      "status": "completed"
+    },
+    {
+      "row": 11,
+      "file": "audio/real_yt_0000_part_013.flac",
+      "ground_truth": "BONAFIDE",
+      "source_type": "youtube_human",
+      "speaker_id": "yt_0000",
+      "raw_score": -4.3397,
+      "predicted_class": "MODEL_PREDICTS_SPOOF",
+      "latency_ms": 386.953,
+      "status": "completed"
+    },
+    {
+      "row": 12,
+      "file": "audio/fake_el_0001_c_part_002.flac",
+      "ground_truth": "SPOOF",
+      "source_type": "elevenlabs_clone",
+      "speaker_id": "el_0001_c",
+      "raw_score": -1.93673,
+      "predicted_class": "MODEL_PREDICTS_SPOOF",
+      "latency_ms": 385.872,
+      "status": "completed"
+    },
+    {
+      "row": 13,
+      "file": "audio/fake_el_0001_c_part_003.flac",
+      "ground_truth": "SPOOF",
+      "source_type": "elevenlabs_clone",
+      "speaker_id": "el_0001_c",
+      "raw_score": -1.59932,
+      "predicted_class": "MODEL_PREDICTS_SPOOF",
+      "latency_ms": 401.454,
+      "status": "completed"
+    },
+    {
+      "row": 14,
+      "file": "audio/fake_el_0001_c_part_004.flac",
+      "ground_truth": "SPOOF",
+      "source_type": "elevenlabs_clone",
+      "speaker_id": "el_0001_c",
+      "raw_score": -1.13917,
+      "predicted_class": "MODEL_PREDICTS_SPOOF",
+      "latency_ms": 418.915,
+      "status": "completed"
+    },
+    {
+      "row": 15,
+      "file": "audio/fake_el_0001_c_part_005.flac",
+      "ground_truth": "SPOOF",
+      "source_type": "elevenlabs_clone",
+      "speaker_id": "el_0001_c",
+      "raw_score": -1.82282,
+      "predicted_class": "MODEL_PREDICTS_SPOOF",
+      "latency_ms": 406.892,
+      "status": "completed"
+    },
+    {
+      "row": 16,
+      "file": "audio/fake_el_0001_part_001.flac",
+      "ground_truth": "SPOOF",
+      "source_type": "elevenlabs_clone",
+      "speaker_id": "el_0001",
+      "raw_score": -2.79754,
+      "predicted_class": "MODEL_PREDICTS_SPOOF",
+      "latency_ms": 387.338,
+      "status": "completed"
+    },
+    {
+      "row": 17,
+      "file": "audio/fake_el_0002_c_part_001.flac",
+      "ground_truth": "SPOOF",
+      "source_type": "elevenlabs_clone",
+      "speaker_id": "el_0002_c",
+      "raw_score": -8.52164,
+      "predicted_class": "MODEL_PREDICTS_SPOOF",
+      "latency_ms": 400.973,
+      "status": "completed"
+    },
+    {
+      "row": 18,
+      "file": "audio/fake_el_0003_c_part_004.flac",
+      "ground_truth": "SPOOF",
+      "source_type": "elevenlabs_clone",
+      "speaker_id": "el_0003_c",
+      "raw_score": -2.67041,
+      "predicted_class": "MODEL_PREDICTS_SPOOF",
+      "latency_ms": 400.125,
+      "status": "completed"
+    },
+    {
+      "row": 19,
+      "file": "audio/fake_el_0003_part_001.flac",
+      "ground_truth": "SPOOF",
+      "source_type": "elevenlabs_clone",
+      "speaker_id": "el_0003",
+      "raw_score": -7.76362,
+      "predicted_class": "MODEL_PREDICTS_SPOOF",
+      "latency_ms": 420.825,
+      "status": "completed"
+    },
+    {
+      "row": 20,
+      "file": "audio/fake_el_0003_part_002.flac",
+      "ground_truth": "SPOOF",
+      "source_type": "elevenlabs_clone",
+      "speaker_id": "el_0003",
+      "raw_score": -7.29087,
+      "predicted_class": "MODEL_PREDICTS_SPOOF",
+      "latency_ms": 503.383,
+      "status": "completed"
+    },
+    {
+      "row": 21,
+      "file": "audio/fake_el_0003_part_003.flac",
+      "ground_truth": "SPOOF",
+      "source_type": "elevenlabs_clone",
+      "speaker_id": "el_0003",
+      "raw_score": -6.35354,
+      "predicted_class": "MODEL_PREDICTS_SPOOF",
+      "latency_ms": 372.788,
+      "status": "completed"
+    }
+  ]
+}

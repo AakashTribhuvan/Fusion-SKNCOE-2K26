@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import PhraseChallenge from './components/PhraseChallenge';
+import LiveSubtitles from './components/LiveSubtitles';
 import AudioRecorder from './components/AudioRecorder';
 import VoiceVerdictBlock from './components/VoiceVerdictBlock';
 import AudioQualityPanel from './components/AudioQualityPanel';
@@ -93,6 +94,7 @@ export default function App() {
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
   const timerRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   const [session, setSession] = useState(null);
   const [phrase, setPhrase] = useState('');
@@ -107,6 +109,8 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [health, setHealth] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [liveTranscript, setLiveTranscript] = useState('');
+
 
   const startTimer = () => {
     clearInterval(timerRef.current);
@@ -129,12 +133,25 @@ export default function App() {
     clearInterval(timerRef.current);
   };
 
+  const stopSpeechRecognition = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (err) {
+        // Ignore stop error
+      }
+      recognitionRef.current = null;
+    }
+  };
+
   const resetRecording = () => {
     stopTimer();
+    stopSpeechRecognition();
     setDuration(0);
     setAudioUrl('');
     setAudioFile(null);
     setAudioFileName('');
+    setLiveTranscript('');
     recordedChunksRef.current = [];
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
@@ -153,6 +170,7 @@ export default function App() {
       setSession(payload);
       setPhrase(payload.challenge_phrase);
       setResult(null);
+      setLiveTranscript('');
       setStatus('Session created. Ready to record.');
     } catch (error) {
       setStatus(error.message || 'Unable to create session');
@@ -171,6 +189,7 @@ export default function App() {
       setPhrase(payload.challenge_phrase);
       setStatus('Challenge refreshed.');
       setResult(null);
+      setLiveTranscript('');
     } catch (error) {
       setStatus(error.message || 'Unable to refresh phrase');
     } finally {
@@ -191,6 +210,7 @@ export default function App() {
     }
 
     try {
+      setLiveTranscript('');
       // Request raw audio: disable noise suppression and auto-gain so the
       // browser does not silence quiet-but-real speech via its noise gate.
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -203,6 +223,30 @@ export default function App() {
       streamRef.current = stream;
       setPermissionState('granted');
 
+      // Initialize Web Speech API for real-time live subtitles
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        try {
+          const recognition = new SpeechRecognition();
+          recognition.continuous = true;
+          recognition.interimResults = true;
+          recognition.lang = 'en-US';
+          recognition.onresult = (event) => {
+            let interim = '';
+            for (let i = event.resultIndex; i < event.results.length; i += 1) {
+              interim += event.results[i][0].transcript;
+            }
+            if (interim) {
+              setLiveTranscript(interim);
+            }
+          };
+          recognition.start();
+          recognitionRef.current = recognition;
+        } catch (err) {
+          console.warn('SpeechRecognition initialization warning:', err);
+        }
+      }
+
       const mimeType = getSupportedMimeType();
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       recordedChunksRef.current = [];
@@ -212,6 +256,7 @@ export default function App() {
         }
       };
       recorder.onstop = async () => {
+        stopSpeechRecognition();
         const recordingMimeType = recorder.mimeType || 'audio/webm';
         const blob = new Blob(recordedChunksRef.current, { type: recordingMimeType });
         if (!blob.size) {
@@ -288,6 +333,7 @@ export default function App() {
   };
 
   const stopRecording = () => {
+    stopSpeechRecognition();
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
       stopTimer();
@@ -367,7 +413,65 @@ export default function App() {
   useEffect(() => {
     initializeSession();
     getHealth().then(setHealth).catch(() => setHealth({ status: 'unavailable' }));
+
+    const handleGlobalPaste = async (e) => {
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+        return;
+      }
+      const items = e.clipboardData?.items ? Array.from(e.clipboardData.items) : [];
+      for (const item of items) {
+        if (item.kind === 'file') {
+          const file = item.getAsFile();
+          if (file && (file.type.startsWith('audio/') || /\.(wav|wave|webm|ogg|oga|mp4|m4a|mpeg|mp3|aac|flac)$/i.test(file.name || ''))) {
+            e.preventDefault();
+            const renamedFile = new File([file], file.name || 'pasted-audio.wav', { type: file.type || 'audio/wav' });
+            handleFileSelect(renamedFile);
+            return;
+          }
+        }
+      }
+
+      if (e.clipboardData?.files && e.clipboardData.files.length > 0) {
+        const file = e.clipboardData.files[0];
+        if (file.type.startsWith('audio/') || /\.(wav|wave|webm|ogg|oga|mp4|m4a|mpeg|mp3|aac|flac)$/i.test(file.name || '')) {
+          e.preventDefault();
+          handleFileSelect(file);
+          return;
+        }
+      }
+
+      const text = e.clipboardData?.getData('text')?.trim();
+      if (text) {
+        if (text.startsWith('data:audio/')) {
+          e.preventDefault();
+          try {
+            const res = await fetch(text);
+            const blob = await res.blob();
+            const file = new File([blob], 'pasted-audio-data.wav', { type: blob.type || 'audio/wav' });
+            handleFileSelect(file);
+          } catch (err) {
+            console.warn('Failed to parse pasted data URI:', err);
+          }
+        } else if (text.startsWith('http://') || text.startsWith('https://')) {
+          e.preventDefault();
+          try {
+            setStatus('Fetching audio from pasted URL…');
+            const res = await fetch(text);
+            const blob = await res.blob();
+            const filename = text.split('/').pop().split('?')[0] || 'pasted-audio.wav';
+            const file = new File([blob], filename, { type: blob.type || 'audio/wav' });
+            handleFileSelect(file);
+          } catch (err) {
+            setStatus(`Failed to fetch audio from URL: ${err.message}`);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('paste', handleGlobalPaste);
+
     return () => {
+      window.removeEventListener('paste', handleGlobalPaste);
       stopTimer();
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
@@ -388,6 +492,12 @@ export default function App() {
       <main className="dashboard">
         <div className="main-column">
           <PhraseChallenge phrase={phrase} onRefresh={refreshPhrase} loading={loading} />
+          <LiveSubtitles
+            phrase={phrase}
+            liveTranscript={liveTranscript}
+            recognizedPhrase={result?.phrase_verification?.recognized_phrase}
+            isRecording={isRecording}
+          />
           <AudioRecorder
             status={status}
             permissionState={permissionState}
