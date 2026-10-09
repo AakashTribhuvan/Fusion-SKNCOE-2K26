@@ -2,7 +2,7 @@
 
 > **Working draft:** edit freely. Scope, owners, dates, and final technology choices are open decisions.
 
-> **Implementation update (2026-10-09):** A local FastAPI demo now has session creation/expiry, phone QR pairing, a randomized six-code motion challenge, browser capture, and an evidence report. Face deepfake, speaker, and audio anti-spoof models remain unavailable; the demo does not automatically approve a session. See `README.md` for run instructions and current limitations.
+> **Implementation update (2026-10-09):** The project is using Git and a shared Python environment rather than requiring Docker. A local FastAPI demo now has session creation/expiry, phone QR pairing, a randomized six-code motion challenge, browser capture, and an evidence report. Face deepfake, speaker, and audio anti-spoof models remain unavailable; the demo does not automatically approve a session. See `README.md` for run instructions and current limitations.
 
 ## 1. Project goal
 
@@ -20,12 +20,12 @@ Build a hackathon-ready onboarding prototype that combines independent evidence 
 
 ### First prototype (must-have)
 
-- Docker Compose starts a web client and API reproducibly.
-- A user can create an onboarding session, grant camera/microphone access, and see a clear progress/results screen.
-- QR pairing and challenge expiry/replay prevention work end to end; mock the phone proof until the mobile component is ready.
-- API contracts and a structured verification report are agreed early so components can be developed independently.
-- At least one pretrained video signal and one voice signal are integrated only after the end-to-end flow works.
-- Demo includes genuine and controlled attack/inconclusive cases, with limitations shown.
+- Teammates can clone the Git repository, create a Python 3.11 virtual environment, install `requirements.txt`, and run the API using the README instructions. Docker is optional and is not required for the current prototype.
+- The current browser client and FastAPI service support session creation/expiry, phone QR pairing, a randomized six-code challenge, capture UI, and a transparent evidence report.
+- Improve challenge validation and the end-to-end flow before adding model dependencies. Keep phone signing and face/voice checks explicitly unavailable until implemented.
+- Define the API report contract and privacy boundaries so work can be split without implying that browser-reported signals are independently verified.
+- Select and integrate one pretrained video or voice baseline only after its licensing, installation, hardware needs, and evaluation data are confirmed.
+- Demo genuine and controlled replay/inconclusive cases, report measured results only, and show limitations.
 
 ### Stretch goals (only after the core flow works)
 
@@ -44,7 +44,7 @@ Build a hackathon-ready onboarding prototype that combines independent evidence 
 | Phase | Work | Exit criteria / deliverable | Owner |
 |---|---|---|---|
 | 0. Align | Confirm challenge framing, demo audience, team size, time budget, device/OS, data policy, and minimum demo | Written scope, responsibilities, and success criteria | TBD |
-| 1. Environment | Install/verify Docker Desktop + WSL 2; scaffold React/Vite/TypeScript and FastAPI; add Compose and health checks | One documented command starts both services; health endpoint responds | TBD |
+| 1. Environment | Clone the Git repository; use Python 3.11 and a project virtual environment; install the pinned/ranged requirements; keep Docker optional | `CheckRequirements.bat` passes; documented Uvicorn command starts the API and `/health` responds | TBD |
 | 2. Contracts and session flow | Define session lifecycle, API response schema, expiring server nonce, upload limits, and error states | Session create/read/expire works; frontend can show a mock verification report | TBD |
 | 3. Onboarding UI | Build welcome/consent, phone-connect QR, live-check, and result screens; implement capture permissions and clear progress | Full user journey works with mocked signals | TBD |
 | 4. Challenge and phone proof | Implement one-time QR challenge and replay/expiry checks; then integrate mobile key registration and signed challenge if time permits | Valid proof succeeds; expired, reused, and invalid signatures fail | TBD |
@@ -53,15 +53,15 @@ Build a hackathon-ready onboarding prototype that combines independent evidence 
 | 7. Decision policy | Define per-check outcomes and escalation rules; build readable report with evidence, quality flags, and limitations | Pass/Review/Inconclusive behavior is consistent and explainable | TBD |
 | 8. Evaluation and hardening | Run attack, quality, security, and integration checks; fix critical issues; rehearse demo | Results table, known limitations, stable demo runbook | TBD |
 
-## 4. Suggested architecture (to validate)
+## 4. Current architecture and choices
 
-- **Frontend:** React + Vite + TypeScript.
-- **API:** Python + FastAPI; WebSocket or polling for session progress.
+- **Current frontend:** static HTML/CSS/JavaScript served by FastAPI. Keep this until a framework migration clearly improves team development or testing.
+- **Current API:** Python 3.11 + FastAPI, with in-memory session state and polling for phone pairing/challenge state.
 - **Video:** OpenCV/MediaPipe for preprocessing and landmarks; PyTorch/pretrained detector for inference.
 - **Voice:** pretrained speaker embeddings plus a separate spoof countermeasure.
-- **Mobile:** React Native with native Android integration as required; Android BiometricPrompt + authentication-gated Keystore key.
+- **Device strategy:** hybrid. Laptop/browser handles onboarding, camera/microphone capture, and results; phone displays the QR challenge. Native biometric-authorized signing is a later goal and is not present in the current browser-only phone page.
 - **Data/auth:** Supabase PostgreSQL/Auth if suitable; enable Row Level Security on exposed tables. Keep service secrets server-side.
-- **Local orchestration:** Docker Compose. Verify Windows/WSL2 GPU support separately; keep model weights and datasets out of container images and Git.
+- **Development/reproducibility:** Git is the shared workflow; Python 3.11 virtual environments and `requirements.txt` are the baseline. Docker remains optional. Keep model weights and datasets out of Git.
 
 ### Initial API surface (draft)
 
@@ -117,7 +117,7 @@ Build a hackathon-ready onboarding prototype that combines independent evidence 
 - **Video/ML:** video preprocessing, pretrained baseline, background ablation, metrics.
 - **Voice:** speaker similarity, anti-spoof baseline, test set and metrics.
 - **Mobile/security:** QR pairing, biometric prompt, key registration, signature verification.
-- **Integration/product:** Docker, API/session contracts, frontend, decision policy, Supabase controls, demo.
+- **Integration/product:** Git workflow, API/session contracts, frontend, decision policy, Supabase controls, demo.
 
 If the team is smaller, prioritize integration and the complete flow; mock unfinished signals clearly instead of presenting mock values as measured results.
 

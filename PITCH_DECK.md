@@ -45,13 +45,13 @@ An explainable, multi-signal verification workflow:
 
 | Layer | Approach | Output |
 |---|---|---|
-| Web | React, Vite, TypeScript | Consent, capture, QR, progress, report |
+| Web | Current prototype: static HTML/CSS/JavaScript served by FastAPI | Pairing, capture UI, progress, evidence report |
 | API/orchestration | FastAPI, session-bound nonces, bounded uploads | Session state and verification contract |
 | Phone | React Native plus native Android BiometricPrompt/Keystore where needed | Signed, expiring challenge proof; biometric data stays local |
 | Video | OpenCV/MediaPipe preprocessing; benchmark a pretrained model | Face/video evidence; optional background/temporal ablation |
 | Voice | Pretrained speaker embedding plus separate anti-spoof model | Similarity and spoof likelihood as distinct signals |
 | Data/security | PostgreSQL/Supabase if selected; backend-only secrets; access policies | Minimal session metadata and protected results |
-| Runtime | Docker Compose; verify GPU compatibility independently | Reproducible local demo |
+| Runtime | Git + Python 3.11 virtual environment + `requirements.txt`; Docker optional | Teammates can install and run the same API locally |
 
 **Enrollment decision:** A custom reference-face comparison is distinct from phone OS biometrics. Supabase can store an authorized reference image or embedding, but it does not compare faces; a backend matcher is required. Keep this feature out of the first build unless the challenge requires it. If included, obtain explicit consent, minimize/expire stored data, restrict it to backend-only access, and evaluate false matches and false non-matches. Never imply that the phone biometric proves the laptop-camera subject is the registered person.
 
@@ -66,7 +66,7 @@ An explainable, multi-signal verification workflow:
 
 ## Slide 7 — Feasibility
 
-- A working vertical slice is feasible with standard web/API/container tooling and pretrained models; first complete the flow with mock model outputs.
+- A working vertical slice is feasible with the current FastAPI/browser prototype and a shared Python 3.11 setup; first complete and validate the flow before integrating models.
 - Integrate one baseline at a time, then evaluate whether additional signals improve held-out performance.
 - Dataset options include the DFDC video dataset and ASVspoof speech-spoofing datasets, subject to access and license/terms review.
 - Keep model training modest: use a small permitted subset and inference-first development; available laptop memory/GPU capacity may constrain training.
