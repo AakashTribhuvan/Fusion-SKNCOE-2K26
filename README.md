@@ -73,6 +73,30 @@ The script measures:
 - Precision, Recall, Accuracy, and EER (Equal Error Rate)
 - Source-wise breakdown (e.g. grouped by TTS model, vocoder, or speaker)
 
+## Empirical Benchmark Results (50 Samples)
+
+Evaluated against a balanced dataset of **24 Genuine Human** YouTube speech clips and **25 ElevenLabs Synthetic Voice Clones**:
+
+![Tabular Benchmark Graph](data/benchmark/tabular_benchmark_graph.png)
+
+### Performance & Security Metrics Table
+
+| Architecture / Model | Accuracy | FAR (Spoof Leak) | FRR (False Reject) | Precision | Recall | Equal Error Rate (EER) | Spoof Caught (TP) | Human Verified (TN) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Multi-Model Ensemble** | **97.96%** | **4.00%** | **0.00%** | **100.0%** | **96.00%** | **0.00%** | **24 / 25** | **24 / 24** |
+| **Model C: Wav2Vec2 Deepfake** | **97.96%** | **4.00%** | **0.00%** | **100.0%** | **96.00%** | **0.00%** | **24 / 25** | **24 / 24** |
+| **Model B: AASIST (Raw)** | 53.06% | 0.00% | 95.83% | 52.08% | 100.0% | 63.25% | 25 / 25 | 1 / 24 |
+
+### Dataset Source Breakdown Table
+
+| Data Source | Ground Truth | Total Clips | Detected Spoof | Detected Genuine | Accuracy Rate | Status |
+| :--- | :--- | :---: | :---: | :---: | :---: | :--- |
+| **YouTube Human Speech** | Bona Fide Human | 24 | 0 | 24 | **100.0%** | **VERIFIED GENUINE (0% FRR)** |
+| **ElevenLabs Voice Clones** | Synthetic Spoof | 25 | 24 | 1 | **96.0%** | **BLOCKED SPOOF (96% TP)** |
+
+![4-Panel Benchmark Analysis](data/benchmark/benchmark_graph.png)
+
+
 ## Pretrained Models & Hardware Constraints
 - **Primary Detector:** Pretrained official AASIST (`backend/app/models/weights/AASIST.pth`, ~1.28 MB), evaluated on CPU with `<50ms` inference latency.
 - **W2V2-AASIST Adapter:** Supports `SpeechAntiSpoofingBenchmarks/W2V2-AASIST` (XLS-R 300M + AASIST graph head). Reports `MODEL_UNAVAILABLE` honestly if weights are not downloaded locally.
