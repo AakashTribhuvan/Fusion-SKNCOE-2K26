@@ -3,19 +3,67 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#0a0f1c">
-  <title>Fusion · Phone Challenge</title>
+  <meta name="theme-color" content="#f1f3ef">
+  <title>Frame / Check · Phone QR</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
   <style>
-    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:radial-gradient(ellipse at 50% 0,#18365a 0,transparent 48%),#0a0f1c;color:#edf3ff;font:16px/1.5 Inter,system-ui,sans-serif}.card{width:min(100%,440px);padding:24px;border:1px solid #263651;border-radius:22px;background:#111a2c;text-align:center}.mark{margin:auto;display:grid;place-items:center;width:42px;height:42px;border:1px solid #45658e;border-radius:14px;color:#8de3c1;font-weight:800}.muted{color:#99a8c2}.pill{display:inline-block;padding:4px 10px;border-radius:999px;background:#1a2c42;color:#8de3c1;font-size:12px}.qr{width:min(76vw,300px);height:min(76vw,300px);margin:18px auto;padding:10px;border-radius:16px;background:#fff;object-fit:contain}.phrase{padding:13px;border:1px solid #355a67;border-radius:12px;color:#8de3c1;font-size:21px;font-weight:700}.hidden{display:none!important}#message{min-height:44px;margin-top:12px;color:#99a8c2}.btn{border:0;border-radius:11px;padding:12px 16px;background:#8de3c1;color:#092117;font-weight:700}
+    :root{color-scheme:light;--canvas:#f1f3ef;--paper:#f7f8f4;--ink:#17241f;--muted:#718078;--line:#d7ddd6;--green:#245c48}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:var(--canvas);color:var(--ink);font:14px/1.55 "DM Sans",Arial,sans-serif}
+    button{font:inherit}
+    .shell{width:min(100%,620px);margin:0 auto;padding:0 22px 30px}
+    .masthead{height:72px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #89948c}
+    .brand{display:flex;align-items:center;gap:10px;font:700 13px "DM Sans",Arial,sans-serif;letter-spacing:.04em}
+    .mark{display:flex;align-items:center;justify-content:center;gap:2px;width:25px;height:25px;border:1px solid #64776c;color:var(--green)}
+    .mark i{display:block;width:2px;background:var(--green)}
+    .mark i:nth-child(1){height:8px}
+    .mark i:nth-child(2){height:14px}
+    .mark i:nth-child(3){height:10px}
+    .mast-label,.eyebrow,.pill,.btn{font-family:"IBM Plex Mono",Consolas,monospace;text-transform:uppercase}
+    .mast-label{color:#75817a;font-size:9px;letter-spacing:.08em}
+    .main{padding-top:34px}
+    .eyebrow{display:flex;align-items:center;gap:9px;margin:0 0 12px;color:var(--green);font-size:9px;font-weight:600;letter-spacing:.06em}
+    .eyebrow::before{content:"";width:20px;border-top:1px solid #9aa99c}
+    h1{margin:0;font:500 clamp(32px,8vw,46px)/1.02 "Newsreader",Georgia,serif;letter-spacing:-.035em}
+    .intro-copy{margin:10px 0 22px;color:#65716a;font-size:13px;line-height:1.7}
+    .panel{border-top:1px solid #6d7971;padding-top:14px}
+    .pill{display:inline-flex;align-items:center;gap:7px;padding:5px 9px;border:1px solid #aebdb0;border-radius:50px;background:transparent;color:#44644f;font-size:9px;font-weight:600;letter-spacing:.05em}
+    .pill::before{content:"";width:6px;height:6px;border-radius:50%;background:#4c9975}
+    .btn{min-height:44px;margin-top:14px;padding:0 16px;border:0;border-radius:0;background:#155c4a;color:#fff;font-size:9px;font-weight:600;letter-spacing:.05em;cursor:pointer}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .btn:focus-visible,button:focus-visible{outline:3px solid #81a8ed;outline-offset:3px}
+    .qr-wrap{margin:14px 0 12px;padding:13px;border:1px dashed #aeb8ad;background:#f5f7f2;text-align:center}
+    .qr{display:block;width:min(78vw,370px);height:min(78vw,370px);margin:0 auto 12px;padding:7px;border:1px solid #d7ddd6;background:#fff;object-fit:contain}
+    .challenge-title{margin:20px 0 5px;font:500 21px/1.2 "Newsreader",Georgia,serif}
+    .challenge-copy{margin:0;color:var(--muted);font-size:12px;line-height:1.65}
+    .hidden{display:none!important}
+    #message{min-height:25px;margin:14px 0 0;color:#56665f;font-size:12px;line-height:1.6}
+    .privacy{margin-top:16px;padding-top:12px;border-top:1px solid var(--line);color:#78837e;font-size:10px;line-height:1.65}
+    .privacy strong{color:#263a32}
+    @media(max-width:480px){.shell{padding-right:16px;padding-left:16px}.masthead{height:64px}.main{padding-top:25px}.qr-wrap{padding:10px}.qr{width:min(82vw,370px);height:min(82vw,370px)}}
   </style>
 </head>
-<body><main class="card">
-  <div class="mark">F</div><h1>Phone challenge</h1>
-  <p class="muted">Keep this page open and show the changing code to the laptop camera.</p>
-  <div id="waiting"><span class="pill">PAIRING PHONE</span><p class="muted">After pairing, verify locally with your phone's platform authenticator to sign this session.</p></div>
-  <section id="challenge" class="hidden"><img id="qr" class="qr" alt="Rotating, one-time verification QR code"><p id="step" class="muted"></p><span class="pill">MOVE IN A SLOW FIGURE EIGHT</span></section>
+<body><div class="shell">
+  <header class="masthead">
+    <div class="brand"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>FRAME / CHECK</div>
+    <span class="mast-label">PHONE COMPANION</span>
+  </header>
+  <main class="main">
+    <section class="intro"><p class="eyebrow">Secure device check</p><h1 id="page-title">Verify this phone</h1><p id="intro-copy" class="intro-copy">Confirm this device locally to display the live QR challenge for the laptop camera.</p></section>
+    <section class="panel">
+  <div id="waiting"><span class="pill">PHONE PAIRING READY</span><p id="waiting-copy" class="challenge-copy" style="margin-top:12px">Tap below to verify locally with your phone’s built-in authenticator. Your phone may use biometrics or its device passcode; Fusion never receives either one.</p><button id="verify-phone" class="btn" disabled>Verify this phone</button></div>
+  <section id="challenge" class="hidden">
+    <h2 class="challenge-title">Scan this live QR</h2>
+    <p class="challenge-copy">Hold the phone steady and keep the screen bright until the laptop shows QR LOCK. Then move slowly in a figure eight.</p>
+    <div class="qr-wrap"><img id="qr" class="qr" alt="Rotating, one-time verification QR code"><span id="step" class="pill">LIVE CHALLENGE</span></div>
+  </section>
   <div id="message" role="status" aria-live="polite">Connecting to the session…</div>
-</main>
+  <div class="privacy"><strong>Private by design.</strong> Phone biometrics or passcode stay on this device. The rotating QR is a temporary challenge for the laptop.</div>
+    </section>
+  </main>
+</div>
 <script>
 (() => {
   const sessionId = location.pathname.split('/').filter(Boolean).pop();
@@ -28,44 +76,95 @@
   const toBuffer = value => {const base64=value.replace(/-/g,'+').replace(/_/g,'/');const binary=atob(base64+'='.repeat((4-base64.length%4)%4));return Uint8Array.from(binary,c=>c.charCodeAt(0)).buffer;};
   const toBase64Url = value => {const bytes=new Uint8Array(value);let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');};
   const deviceId = () => {let id=localStorage.getItem('fusion:phone-device-id');if(!id){id=crypto.randomUUID();localStorage.setItem('fusion:phone-device-id',id);}return id;};
+  const authError = error => {
+    if (error.name === 'NotAllowedError' || error.name === 'AbortError') return 'Phone verification was cancelled or timed out. Keep this page open and reload it to try again.';
+    if (error.name === 'SecurityError') return 'Phone verification requires the HTTPS link opened from the laptop. Scan the pairing QR again.';
+    if (error.name === 'InvalidStateError') return 'This phone credential is already active. Reload the page and try again.';
+    return error.message || 'Phone verification could not be completed. Reload the page to try again.';
+  };
   const serializeCredential = (credential, registering) => {const r=credential.response;const response={clientDataJSON:toBase64Url(r.clientDataJSON)};if(registering){response.attestationObject=toBase64Url(r.attestationObject);response.transports=r.getTransports?.()||[];}else{response.authenticatorData=toBase64Url(r.authenticatorData);response.signature=toBase64Url(r.signature);response.userHandle=r.userHandle?toBase64Url(r.userHandle):null;}return{id:credential.id,rawId:toBase64Url(credential.rawId),type:credential.type,authenticatorAttachment:credential.authenticatorAttachment,response,clientExtensionResults:credential.getClientExtensionResults()};};
   const registerPhone = async id => {say('Create a phone platform credential and complete local user verification…');const options=await call(`/api/sessions/${sessionId}/phone/webauthn/registration/options`,{method:'POST',body:JSON.stringify({device_id:id})});options.challenge=toBuffer(options.challenge);options.user.id=toBuffer(options.user.id);options.excludeCredentials=(options.excludeCredentials||[]).map(item=>({...item,id:toBuffer(item.id)}));const credential=await navigator.credentials.create({publicKey:options});if(!credential)throw new Error('Phone credential creation was cancelled.');await call(`/api/sessions/${sessionId}/phone/webauthn/registration/verify`,{method:'POST',body:JSON.stringify({credential:serializeCredential(credential,true)})});};
   const authenticatePhone = async id => {say('Verify locally with your phone to sign a fresh server challenge…');const options=await call(`/api/sessions/${sessionId}/phone/webauthn/authentication/options`,{method:'POST',body:JSON.stringify({device_id:id})});options.challenge=toBuffer(options.challenge);options.allowCredentials=(options.allowCredentials||[]).map(item=>({...item,id:toBuffer(item.id)}));const assertion=await navigator.credentials.get({publicKey:options});if(!assertion)throw new Error('Phone verification was cancelled.');await call(`/api/sessions/${sessionId}/phone/webauthn/authentication/verify`,{method:'POST',body:JSON.stringify({credential:serializeCredential(assertion,false)})});};
   let activeChallenge = null;
   let ticker = null;
+  let poller = null;
+  let currentImageUrl = null;
+  let sessionExpiresAt = 0;
   async function connect() {
     try {
       if (!token) throw new Error('Pairing token is missing. Scan the QR from the laptop again.');
       if (params.has('token')) { await call(`/api/sessions/${sessionId}/pair`,{method:'POST',body:JSON.stringify({token})}); sessionStorage.setItem(`fusion:${sessionId}`,token); history.replaceState({},'',location.pathname); }
       if (!isSecureContext || !navigator.credentials || !navigator.credentials.create || !navigator.credentials.get) throw new Error('Phone platform authentication needs a secure HTTPS page. Use localhost for laptop-only testing or deploy the demo behind HTTPS for your phone.');
       const session=await call(`/api/sessions/${sessionId}`);
-      if(!session.phone_verified){let id=localStorage.getItem('fusion:phone-device-id');if(id){try{await authenticatePhone(id);}catch(error){if(error.status!==409)throw error;localStorage.removeItem('fusion:phone-device-id');id=null;}}if(!id){id=deviceId();await registerPhone(id);await authenticatePhone(id);}}
-      say('Phone user verification succeeded. Biometric data stayed on this device. Waiting for the laptop to start the challenge…');
-      setInterval(async () => {
-        try { const challenge=await call(`/api/sessions/${sessionId}/challenge`); if(challenge.status==='active'&&challenge.id!==activeChallenge?.id){activeChallenge=challenge;startSequence(challenge);} }
-        catch(error){ if(!error.message.includes('has not started')) say(error.message); }
-      },1000);
-    } catch(error) { say(error.message); }
+      sessionExpiresAt=Date.parse(session.expires_at);
+      if(session.phone_verified){$('verify-phone').classList.add('hidden');$('waiting-copy').textContent='Phone verification is complete. Keep this page open while the laptop starts the challenge.';say('Phone user verification is already complete. Waiting for the laptop to start the challenge…');pollChallenge();}
+      else{$('verify-phone').disabled=false;say('Phone paired. Tap “Verify this phone” to continue.');}
+    } catch(error) { say(authError(error)); }
+  }
+  $('verify-phone').addEventListener('click', async () => {
+    const button=$('verify-phone');
+    button.disabled=true;
+    try {
+      let id=localStorage.getItem('fusion:phone-device-id');
+      if(id){try{await authenticatePhone(id);}catch(error){if(error.status!==409)throw error;localStorage.removeItem('fusion:phone-device-id');id=null;}}
+      if(!id){id=deviceId();await registerPhone(id);await authenticatePhone(id);}
+      button.classList.add('hidden');
+      $('waiting-copy').textContent='Phone verification is complete. Keep this page open while the laptop starts the challenge.';
+      say('Phone user verification succeeded. Your phone handled verification locally. Waiting for the laptop to start the challenge…');
+      pollChallenge();
+    } catch(error) {
+      say(authError(error));
+      button.disabled=false;
+    }
+  });
+  async function pollChallenge() {
+    if (Date.now() >= sessionExpiresAt) { activeChallenge=null; stopSequence(); say('This session has expired. Start a new session on the laptop.'); return; }
+    try {
+      const challenge=await call(`/api/sessions/${sessionId}/challenge`);
+      if(challenge.status==='active'&&challenge.id!==activeChallenge?.id){activeChallenge=challenge;startSequence(challenge);}
+      else if(challenge.status!=='active'){activeChallenge=null;stopSequence();say('This challenge has ended. Start a fresh challenge from the laptop.');}
+    } catch(error) {
+      if(error.status!==404) say(authError(error));
+    } finally {
+      poller=setTimeout(pollChallenge,1000);
+    }
+  }
+  function stopSequence() {
+    if(ticker){clearTimeout(ticker);ticker=null;}
+    if(currentImageUrl){URL.revokeObjectURL(currentImageUrl);currentImageUrl=null;}
+    $('qr').removeAttribute('src');
+    $('qr').classList.add('hidden');
+    $('challenge').classList.add('hidden');
+    $('waiting').classList.remove('hidden');
+    $('page-title').textContent='Verify this phone';
+    $('intro-copy').textContent='Confirm this device locally to display the live QR challenge for the laptop camera.';
   }
   function startSequence(challenge) {
-    if(ticker)clearInterval(ticker);
+    if(ticker)clearTimeout(ticker);
+    $('page-title').textContent='QR challenge';
+    $('intro-copy').textContent='Keep this screen bright and facing the laptop camera.';
     $('waiting').classList.add('hidden'); $('challenge').classList.remove('hidden'); say('Challenge active.');
     let step=0;
-    let priorImageUrl=null;
     const show=async()=>{
       const current=step;
       $('step').textContent=`Signal ${current+1} of ${challenge.step_count} · live sequence`;
       step=(step+1)%challenge.step_count;
       try {
-        const response=await fetch(`/api/sessions/${sessionId}/challenge/${challenge.id}/qr/${current}`,{headers});
-        if(!response.ok)throw new Error('Challenge expired. Restart from the laptop.');
+        const response=await fetch(`/api/sessions/${sessionId}/challenge/${challenge.id}/qr/${current}`,{headers,cache:'no-store'});
+        if(!response.ok){const error=new Error(response.status===410?'Challenge expired. Start a fresh challenge from the laptop.':`Could not load challenge code (${response.status}).`);error.status=response.status;throw error;}
         const imageUrl=URL.createObjectURL(await response.blob());
-        if(priorImageUrl)URL.revokeObjectURL(priorImageUrl);
-        priorImageUrl=imageUrl;$('qr').src=imageUrl;$('qr').classList.remove('hidden');
-      } catch(error) { say(error.message);clearInterval(ticker); }
+        if(activeChallenge?.id!==challenge.id){URL.revokeObjectURL(imageUrl);return;}
+        if(currentImageUrl)URL.revokeObjectURL(currentImageUrl);
+        currentImageUrl=imageUrl;$('qr').src=imageUrl;$('qr').classList.remove('hidden');
+        ticker=setTimeout(show,Math.max(500,challenge.step_seconds*1000));
+      } catch(error) { activeChallenge=null;say(authError(error));stopSequence(); }
     };
-    show();ticker=setInterval(show,1500);
+    show();
   }
+  window.addEventListener('pagehide', () => {
+    if(poller)clearTimeout(poller);
+    stopSequence();
+  });
   connect();
 })();
 </script>

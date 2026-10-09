@@ -8,16 +8,19 @@ pydantic-settings>=2.4,<3.0
 python-multipart>=0.0.9,<1.0
 webauthn>=2.2,<3.0
 
-# Supabase client (database/auth; this does not perform biometric matching)
-supabase>=2.6,<3.0
-
 # Computer vision and ML baseline
 mediapipe>=0.10.20,<0.11
 opencv-contrib-python>=4.10,<5.0
 torch>=2.6,<3.0
 qrcode[pil]>=8,<9
+transformers>=4.45,<5.0
+faster-whisper>=1.1,<2.0
+soundfile>=0.12,<1.0
+scipy>=1.14,<2.0
+av>=12,<20
+pillow>=10,<13
 
 # Note: install the PyTorch build that matches your OS and CUDA/CPU setup using
 # https://pytorch.org/get-started/locally/ if the default pip build is unsuitable.
-# Add a specific speaker-verification / anti-spoofing package only after we select
-# and validate the actual model; none has been chosen yet.
+# Model weights are downloaded lazily from pinned Hugging Face revisions; they
+# are not bundled in Git. The UI never performs speaker identity matching.

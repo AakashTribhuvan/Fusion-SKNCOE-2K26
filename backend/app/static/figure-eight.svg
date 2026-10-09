@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" role="img" aria-labelledby="title description">
+  <title id="title">Slow figure-eight phone movement</title>
+  <desc id="description">Move the phone around both loops while keeping the QR code facing the camera.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#245c48"/>
+    </marker>
+  </defs>
+  <path d="M 180 92 C 150 27 59 22 43 77 C 26 136 113 159 180 92 C 247 25 334 48 317 104 C 300 159 210 157 180 92"
+        fill="none" stroke="#245c48" stroke-linecap="round" stroke-linejoin="round" stroke-width="7"
+        marker-start="url(#arrow)" marker-mid="url(#arrow)"/>
+  <circle cx="180" cy="92" r="7" fill="#d2bd54"/>
+  <text x="180" y="172" fill="#58665e" font-family="sans-serif" font-size="13" text-anchor="middle">keep QR facing the camera · move slowly</text>
+</svg>

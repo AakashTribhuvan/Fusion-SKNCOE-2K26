@@ -3,64 +3,229 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0a0f1c">
-  <title>Fusion · Identity Check</title>
+  <meta name="theme-color" content="#f1f3ef">
+  <title>Frame / Check · Live Examination</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
   <style>
-    :root{color-scheme:dark;--bg:#0a0f1c;--panel:#111a2c;--line:#263651;--muted:#99a8c2;--text:#edf3ff;--mint:#8de3c1;--blue:#8db7ff;--warn:#f4c977;--red:#ff9292}
-    *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 75% -15%,#18365a 0,transparent 45%),var(--bg);color:var(--text);font:16px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
-    main{max-width:1080px;margin:auto;padding:48px 22px 80px}.top{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13px;letter-spacing:.14em;text-transform:uppercase}.mark{display:grid;place-items:center;width:36px;height:36px;border:1px solid #45658e;border-radius:12px;color:var(--mint);font-weight:800;letter-spacing:0}
-    h1{max-width:760px;margin:30px 0 12px;font-size:clamp(36px,6vw,64px);line-height:1.03;letter-spacing:-.045em}h1 span{color:var(--mint)}.lede{max-width:700px;color:#b8c6dc;font-size:18px}.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;margin-top:34px}.card{padding:24px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(145deg,#131e32,#0f1727);box-shadow:0 24px 70px #03071270}.card h2{margin:0 0 6px;font-size:20px}.muted{color:var(--muted)}.step{display:flex;gap:13px;align-items:flex-start;padding:15px 0;border-top:1px solid #23314a}.num{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#1c2d46;color:var(--mint);font-size:13px;font-weight:700}.step p{margin:0}.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:46px;border:0;border-radius:12px;padding:0 18px;background:var(--mint);color:#092117;font:700 15px inherit;cursor:pointer}.btn.secondary{border:1px solid #385274;background:#16243a;color:var(--text)}.btn:disabled{opacity:.45;cursor:not-allowed}.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:18px}.status{min-height:28px;margin-top:12px;color:var(--muted)}.pill{display:inline-flex;padding:4px 10px;border-radius:999px;background:#1a2c42;color:var(--mint);font-size:12px}.pair{display:flex;align-items:center;gap:18px;margin-top:18px}.qr{width:150px;height:150px;padding:8px;border-radius:12px;background:#fff;object-fit:contain}.hidden{display:none!important}video{display:block;width:100%;max-height:360px;margin-top:16px;background:#05080e;border:1px solid var(--line);border-radius:14px;object-fit:cover;transform:scaleX(-1)}.phrase{margin:12px 0;padding:14px 16px;border:1px solid #355a67;border-radius:12px;background:#10242b;color:var(--mint);font-size:21px;font-weight:700;letter-spacing:.04em}.report{display:grid;gap:9px;margin-top:14px}.check{display:flex;justify-content:space-between;gap:16px;padding:12px 14px;border-radius:11px;background:#0b1321;border:1px solid #223149}.check small{color:var(--muted);text-align:right}.notice{padding:12px 14px;border-left:3px solid var(--warn);background:#231d12;color:#e8d8b8;border-radius:0 10px 10px 0;font-size:14px}.foot{margin-top:20px;color:#8391a9;font-size:13px}.link{color:var(--blue);word-break:break-all}pre{white-space:pre-wrap;word-break:break-word;color:#c4d2e8}button:focus-visible,a:focus-visible{outline:3px solid #9bdfff;outline-offset:3px}
-    @media(max-width:760px){main{padding:30px 16px 54px}.grid{grid-template-columns:1fr}.pair{align-items:flex-start;flex-direction:column}.qr{width:132px;height:132px}}
+    :root{color-scheme:light;--canvas:#f4f3ef;--paper:#fff;--ink:#172321;--muted:#697570;--line:#e2e5df;--green:#155c4a;--green-soft:#e6f1ec;--blue:#315cce;--amber:#fff3dc;--shadow:0 16px 48px #27332b0b}
+    *{box-sizing:border-box}body{margin:0;background:var(--canvas);color:var(--ink);font:15px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}button{font:inherit}.shell{max-width:1160px;margin:auto;padding:0 30px 64px}.masthead{height:76px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #dfe2dc}.brand{display:flex;align-items:center;gap:11px;font-size:15px;font-weight:750;letter-spacing:-.02em}.mark{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--green);color:white;font-weight:800;font-size:14px}.mast-label{font-size:12px;color:var(--muted);letter-spacing:.03em}.mast-right{display:flex;gap:10px;align-items:center}.environment{border:1px solid #d9e1d9;background:#edf2ec;border-radius:999px;padding:6px 11px;font-size:11px;font-weight:700;color:#3b6555;letter-spacing:.05em;text-transform:uppercase}.hero{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:36px;align-items:end;padding:54px 0 34px}.eyebrow{margin:0 0 12px;color:var(--green);font-size:11px;font-weight:750;letter-spacing:.13em;text-transform:uppercase}.hero h1{max-width:740px;margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(43px,6.2vw,70px);font-weight:500;letter-spacing:-.055em;line-height:.99}.hero h1 span{color:var(--green)}.lede{max-width:690px;margin:18px 0 0;color:#5e6b65;font-size:16px;line-height:1.7}.hero-note{padding:17px 18px;border:1px solid #dfe3dc;border-radius:13px;background:#fbfbf8}.hero-note strong{display:block;font-size:13px}.hero-note p{margin:6px 0 0;color:var(--muted);font-size:12px;line-height:1.6}.workspace-head{display:flex;justify-content:space-between;align-items:end;margin:15px 0 12px}.workspace-head h2{margin:0;font-size:19px;letter-spacing:-.03em}.workspace-head p{margin:3px 0 0;color:var(--muted);font-size:12px}.workspace{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(275px,.75fr);gap:15px;align-items:start}.card{padding:23px;border:1px solid var(--line);border-radius:14px;background:var(--paper);box-shadow:var(--shadow)}.card h2{margin:0 0 5px;font-size:16px;letter-spacing:-.02em}.muted{color:var(--muted)}.card-intro{margin:0 0 17px;color:var(--muted);font-size:13px}.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px}.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:43px;padding:0 16px;border:1px solid var(--green);border-radius:8px;background:var(--green);color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:background .15s,border-color .15s,transform .15s}.btn:hover:not(:disabled){background:#104b3c;border-color:#104b3c;transform:translateY(-1px)}.btn:disabled{opacity:.45;cursor:not-allowed}.btn:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #81a8ed;outline-offset:3px}.btn .arrow{font-size:17px;font-weight:400}.status{min-height:24px;margin:13px 0 0;color:#56665f;font-size:13px}.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 9px;border:1px solid #d8e5dc;border-radius:999px;background:#f1f6f2;color:#285c49;font-size:10px;font-weight:750;letter-spacing:.06em}.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:#4c9975}.session-line{display:flex;align-items:center;gap:10px}.session-line .muted{font-size:12px}.pair{display:flex;align-items:center;gap:19px;margin-top:17px;padding:16px;border:1px solid #e6e9e4;border-radius:10px;background:#fafbf8}.qr{width:138px;height:138px;padding:7px;border:1px solid #eee;border-radius:7px;background:#fff;object-fit:contain}.pair-copy strong{font-size:14px}.pair-copy p{margin:5px 0 0;font-size:12px;line-height:1.65}.hidden{display:none!important}.steps-card{padding:22px}.steps{margin-top:13px}.step{display:flex;gap:12px;align-items:flex-start;padding:13px 0;border-top:1px solid #edf0eb}.num{flex:none;display:grid;place-items:center;width:25px;height:25px;border:1px solid #d8e7dd;border-radius:7px;background:#f1f6f2;color:var(--green);font-size:11px;font-weight:750}.step p{margin:0;font-size:12px;line-height:1.55}.step strong{display:block;margin-bottom:2px;font-size:13px}.capture-card,.report-card{grid-column:1/-1}.card-heading{display:flex;justify-content:space-between;gap:14px;align-items:start}.capture-card .muted{margin:5px 0;font-size:13px}video{display:block;width:100%;max-height:360px;margin-top:16px;background:#141c19;border:1px solid var(--line);border-radius:9px;object-fit:cover;transform:scaleX(-1)}.notice{margin-top:14px;padding:12px 14px;border:1px solid #f0dfb7;border-radius:8px;background:var(--amber);color:#69532b;font-size:12px;line-height:1.6}.report{display:grid;gap:7px;margin-top:14px}.check{display:flex;justify-content:space-between;gap:16px;padding:11px 12px;border:1px solid #e7eae5;border-radius:8px;background:#fbfcfa;font-size:12px}.check small{max-width:68%;color:var(--muted);text-align:right;line-height:1.5}.foot{margin-top:15px;color:#78837e;font-size:11px;line-height:1.7}    .consent{display:flex;gap:10px;align-items:flex-start;margin-top:14px;padding:12px;border:1px solid #e2e7e0;border-radius:8px;background:#fafbf8;color:#56645d;font-size:12px;line-height:1.55}.consent input{flex:none;width:17px;height:17px;margin:1px 0 0;accent-color:var(--green)}.consent:focus-within{outline:3px solid #81a8ed;outline-offset:2px}
+    .privacy{display:flex;gap:12px;align-items:flex-start;margin-top:17px;padding:13px 15px;border-radius:9px;background:#e9ede7;color:#58645e;font-size:11px;line-height:1.65}.privacy strong{color:#263a32}.privacy-icon{flex:none;color:var(--green);font-size:15px}.page-foot{display:flex;justify-content:space-between;gap:20px;margin-top:24px;padding-top:15px;border-top:1px solid #dfe2dc;color:#7a847f;font-size:11px}.page-foot a{color:var(--green);text-decoration:none}.page-foot a:hover{text-decoration:underline}
+    @media(max-width:780px){.shell{padding:0 18px 44px}.hero{grid-template-columns:1fr;gap:20px;padding:39px 0 23px}.hero-note{max-width:500px}.workspace{grid-template-columns:1fr}.capture-card,.report-card{grid-column:auto}.workspace-head{align-items:start;flex-direction:column;gap:3px}.mast-label{display:none}}
+    @media(max-width:480px){.shell{padding:0 13px 35px}.masthead{height:65px}.brand{font-size:14px}.environment{font-size:9px;padding:5px 8px}.hero h1{font-size:46px}.hero{padding-top:33px}.card{padding:18px}.pair{align-items:flex-start;flex-direction:column}.qr{width:132px;height:132px}.page-foot{flex-direction:column;gap:6px}.check{flex-direction:column;gap:4px}.check small{max-width:none;text-align:left}}
+  </style>
+  <style>
+    :root{color-scheme:light;--canvas:#f1f3ef;--paper:#f7f8f4;--ink:#17241f;--muted:#718078;--line:#d7ddd6;--blue:#285b7c;--green:#245c48;--amber:#f2e2a5}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--canvas);color:var(--ink);font:14px/1.55 "DM Sans",Arial,sans-serif}
+    .shell{max-width:1600px;padding:0 4.2% 25px}
+    .masthead{height:72px;position:relative;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #89948c}
+    .brand{gap:10px;font:700 13px "DM Sans",Arial,sans-serif;letter-spacing:.04em}
+    .mark{display:flex;align-items:center;justify-content:center;gap:2px;width:25px;height:25px;border:1px solid #64776c;border-radius:0;background:transparent}
+    .mark i{display:block;width:2px;background:var(--green)}
+    .mark i:nth-child(1){height:8px}
+    .mark i:nth-child(2){height:14px}
+    .mark i:nth-child(3){height:10px}
+    .mast-label{position:absolute;left:50%;transform:translateX(-50%);color:#75817a;font:9px/1.4 "IBM Plex Mono",Consolas,monospace;letter-spacing:.08em;text-transform:uppercase}
+    .mast-right{gap:12px}
+    .environment{border:0;border-radius:0;background:none;padding:0;color:#a35737;font:9px "IBM Plex Mono",Consolas,monospace;letter-spacing:.06em}
+    .environment::before{content:"";display:inline-block;width:7px;height:7px;margin-right:7px;border-radius:50%;background:#bc6844}
+    .environment.online{color:#37634c}
+    .environment.online::before{background:#43815d}
+    .api-label{border-left:1px solid var(--line);padding-left:12px;color:#808981;font:9px "IBM Plex Mono",Consolas,monospace}
+    .hero{grid-template-columns:minmax(0,1fr) minmax(270px,365px);gap:7%;align-items:center;padding:61px 0 48px}
+    .eyebrow{display:flex;align-items:center;gap:10px;color:var(--green);font:700 9px "IBM Plex Mono",Consolas,monospace;letter-spacing:.06em}
+    .eyebrow::before{content:"01";display:grid;place-items:center;width:23px;height:23px;border:1px solid #9aa99c;border-radius:50%;letter-spacing:0}
+    .hero h1{max-width:900px;font:500 clamp(52px,6vw,90px)/.91 "Newsreader",Georgia,"Times New Roman",serif;letter-spacing:-.045em}
+    .hero h1 span{display:block;color:#245c48}
+    .lede{max-width:610px;margin-top:23px;font-size:14px;line-height:1.75;color:#65716a}
+    .hero-note{border:0;border-left:2px solid #d5bd53;border-radius:0;background:transparent;padding:5px 0 5px 20px}
+    .hero-note strong{font:9px "IBM Plex Mono",Consolas,monospace;color:#7b857e;letter-spacing:.08em;text-transform:uppercase}
+    .hero-note p{margin-top:12px;font:16px/1.65 "Newsreader",Georgia,"Times New Roman",serif;color:#4a574f}
+    .workspace-head{display:none}
+    .workspace{grid-template-columns:minmax(250px,22.5%) minmax(0,1fr);gap:34px 36px;border-top:1px solid #6d7971;padding-top:15px}
+    .card{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+    .card h2{font:500 19px "Newsreader",Georgia,"Times New Roman",serif;letter-spacing:0}
+    .card-intro{font-size:12px}
+    .session-line{align-items:center;gap:9px;margin:13px 0}
+    .pill{border-color:#aebdb0;border-radius:50px;background:transparent;color:#44644f}
+    .session-line .muted{font:9px "IBM Plex Mono",Consolas,monospace}
+    .pair{align-items:center;gap:14px;margin-top:13px;padding:14px;border:1px dashed #aeb8ad;border-radius:0;background:#f5f7f2}
+    .qr{width:105px;height:105px;border-radius:0}
+    .pair-copy strong{font:500 16px "Newsreader",Georgia,"Times New Roman",serif}
+    .pair-copy p{font-size:11px}
+    .btn{min-height:44px;border:0;border-radius:0;background:#a2b8ab;box-shadow:none;font:700 9px "IBM Plex Mono",Consolas,monospace;letter-spacing:.04em;text-transform:uppercase}
+    .btn:hover:not(:disabled){border:0;background:#759885}
+    .btn:disabled{opacity:.65}
+    .btn.action-ready{position:relative;background:#155c4a;color:#fff;box-shadow:0 0 0 2px #f7f8f4,0 0 0 4px #155c4a;animation:ready-pulse 1.8s ease-in-out infinite}
+    .btn.action-ready::after{content:"  →";font-size:15px;line-height:0}
+    .btn.action-ready:hover:not(:disabled){background:#104b3c;box-shadow:0 0 0 2px #f7f8f4,0 0 0 5px #155c4a;transform:translateY(-1px)}
+    @keyframes ready-pulse{0%,100%{box-shadow:0 0 0 2px #f7f8f4,0 0 0 4px #155c4a}50%{box-shadow:0 0 0 2px #f7f8f4,0 0 0 6px #155c4a}}
+    @media(prefers-reduced-motion:reduce){.btn.action-ready{animation:none}}
+    #capture-status.ready-status{color:#155c4a;font-weight:700}
+    .source-card h2{margin:0 0 4px;font:500 18px "Newsreader",Georgia,"Times New Roman",serif}
+    .source-card .card-intro{margin-bottom:12px}
+    .capture-card{grid-column:2;grid-row:1;min-width:0}
+    .card-heading{align-items:center;border-bottom:1px solid var(--line);padding:0 0 10px}
+    .card-heading h2{display:inline;font:9px "IBM Plex Mono",Consolas,monospace;text-transform:uppercase}
+    .card-heading .muted{display:none}
+    .card-heading .pill{border:0;font:9px "IBM Plex Mono",Consolas,monospace}
+    .consent{margin-top:12px;padding:10px;border:1px solid var(--line);border-radius:0;background:#f7f8f4;font-size:11px}
+    video{width:100%;height:min(50vw,520px);max-height:520px;margin-top:14px;border:0;border-radius:0;background:#182520;object-fit:contain;transform:none}
+    .viewer{position:relative;display:grid;place-items:center;width:100%;height:min(50vw,520px);margin-top:14px;overflow:hidden;background-color:#182520;background-image:linear-gradient(#ffffff08 1px,transparent 1px),linear-gradient(90deg,#ffffff08 1px,transparent 1px);background-size:22px 22px}
+    .viewer-frame{position:absolute;inset:14% 22%;border:1px solid #7586754a;pointer-events:none}
+    .viewer-frame::before,.viewer-frame::after{position:absolute;width:14px;height:14px;border-color:#ac9d4a;border-style:solid;content:""}
+    .viewer-frame::before{top:-1px;left:-1px;border-width:1px 0 0 1px}
+    .viewer-frame::after{right:-1px;bottom:-1px;border-width:0 1px 1px 0}
+    .viewer-empty{position:relative;z-index:1;color:#c0c9c2;text-align:center;font:9px "IBM Plex Mono",Consolas,monospace}
+    .viewer-empty strong{display:block;margin:12px 0 7px;font-weight:500}
+    .viewer-empty span{display:block;color:#96a49a;font:12px "Newsreader",Georgia,"Times New Roman",serif}
+    .viewer-empty small{display:block;margin-top:12px;color:#d2bd54;font-size:8px}
+    .viewer.streaming .viewer-empty{display:none}
+    #preview{position:absolute;inset:0;width:100%;height:100%;margin:0}
+    .qr-tracker{position:absolute;z-index:3;border:2px solid #d2bd54;box-shadow:0 0 0 1px #17241f,0 0 18px #d2bd5470;pointer-events:none;transition:left .12s linear,top .12s linear,width .12s linear,height .12s linear}
+    .qr-tracker.is-stale{border-style:dashed;opacity:.65}
+    .qr-tracker span{position:absolute;left:-2px;top:-21px;padding:2px 5px;background:#d2bd54;color:#17241f;font:8px "IBM Plex Mono",Consolas,monospace;white-space:nowrap}
+    .camera-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:10px}
+    .camera-control{display:flex;align-items:center;gap:7px;color:#56645d;font:10px "IBM Plex Mono",Consolas,monospace}
+    .camera-control input{width:105px;accent-color:var(--green)}
+    .camera-control select{max-width:min(280px,75vw);min-height:30px;border:1px solid var(--line);background:#f7f8f4;color:#263a32;font:10px "DM Sans",Arial,sans-serif}
+    .camera-control output{min-width:27px;color:#263a32}
+    .camera-control-button{min-height:30px;padding:0 9px;border:1px solid var(--line);background:#f7f8f4;color:#365346;font:9px "IBM Plex Mono",Consolas,monospace;cursor:pointer}
+    .camera-control-button:disabled{opacity:.55;cursor:not-allowed}
+    .camera-control-status{margin:7px 0 0;color:#718078;font-size:10px}
+    .scan-directions{margin:12px 0 0;padding:10px 12px;border-left:3px solid var(--green);background:#edf2ec;color:#40554a;font-size:11px;line-height:1.6}
+    .scan-directions strong{color:#213c30}
+    .row{margin-top:12px}
+    .capture-card .row .muted{font-size:11px}
+    .report-card{grid-column:1/-1;border-top:1px solid #6d7971;padding-top:16px}
+    .report-card h2{font:9px ui-monospace,Consolas,monospace;text-transform:uppercase}
+    .report-decision{margin:12px 0;padding:12px 14px;border-left:3px solid var(--green);background:#edf2ec;font-weight:700}
+    .notice{border-radius:0}
+    .check{border-radius:0;background:#f7f8f4}
+    .check small{font-size:11px}
+    .foot{font:11px/1.7 "Newsreader",Georgia,"Times New Roman",serif}
+    .privacy{display:none}
+    .page-foot{margin-top:22px;border-top:1px solid #87928a;padding-top:12px;color:#808a83;font:8px "IBM Plex Mono",Consolas,monospace;text-transform:uppercase}
+    .page-foot a{color:#37624e}
+    @media(max-width:760px){.shell{padding:0 20px 20px}.mast-label{display:none}.hero{grid-template-columns:1fr;gap:20px;padding:42px 0 30px}.hero h1{font-size:clamp(48px,12vw,72px)}.hero-note{max-width:540px}.workspace{grid-template-columns:1fr;gap:25px}.capture-card,.report-card{grid-column:1;grid-row:auto}.viewer,video{height:64vw;max-height:440px}.capture-card .card-heading .muted{display:block}.pair{align-items:flex-start;flex-direction:row}.page-foot{flex-direction:column;gap:8px}}
+    @media(max-width:480px){.shell{padding:0 14px 18px}.masthead{height:60px}.environment{font-size:8px}.api-label{font-size:8px;padding-left:8px}.hero{padding:34px 0 25px}.hero h1{font-size:48px}.hero-note p{font-size:14px}.pair{flex-direction:column}.qr{width:120px;height:120px}.viewer,video{height:72vw}}
+  </style>
+  <style>
+    .workspace{display:block}
+    .workflow-tabs{display:flex;gap:5px;overflow-x:auto;margin:10px 0 16px;padding:5px;border:1px solid #d7ddd6;background:#e9ede7}
+    .workflow-tab{flex:1;min-width:115px;min-height:42px;padding:8px 12px;border:1px solid transparent;background:transparent;color:#59675f;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+    .workflow-tab[aria-selected="true"]{border-color:#89948c;background:#f7f8f4;color:#17241f}
+    .workflow-tab:disabled{opacity:.42;cursor:not-allowed}
+    .tab-panel[hidden]{display:none}
+    .tab-intro{max-width:760px;margin:0 0 20px;color:#58665e;font-size:14px;line-height:1.7}
+    .motion-directions{display:grid;grid-template-columns:minmax(0,1fr) 190px;gap:16px;align-items:center;margin:14px 0;padding:14px;border:1px solid var(--line);background:#edf2ec}
+    .motion-directions ol{margin:0;padding-left:20px;color:#40554a;font-size:12px;line-height:1.7}
+    .motion-directions li+li{margin-top:5px}
+    .motion-diagram{display:block;width:100%;max-width:190px}
+    .guide-download{display:inline-block;margin-top:7px;color:var(--green);font-size:10px;font-weight:700}
+    .motion-overlay{position:absolute;z-index:2;right:12px;bottom:12px;width:112px;padding:5px;background:#17241fe8}
+    .motion-overlay img{display:block;width:100%;opacity:.9}
+    .motion-overlay span{display:block;color:#f4f3ef;text-align:center;font:8px "IBM Plex Mono",Consolas,monospace}
+    .voice-result{margin-top:14px;padding:14px;border:1px solid var(--line);background:#edf2ec;color:#40554a;font-size:12px;line-height:1.7}
+    .tab-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:17px}
+    .secondary-btn{min-height:40px;padding:0 14px;border:1px solid #89948c;background:#f7f8f4;color:#263a32;font-size:12px;font-weight:700;cursor:pointer}
+    .secondary-btn:disabled{opacity:.45;cursor:not-allowed}
+    @media(max-width:600px){.motion-directions{grid-template-columns:1fr}.motion-diagram{max-width:145px;margin:auto}.workflow-tab{min-width:95px;padding:7px 8px;font-size:10px}.motion-overlay{width:88px}}
   </style>
 </head>
 <body>
-<main>
-  <div class="top"><div class="mark">F</div> Fusion · Secure onboarding demo</div>
-  <h1>Identity checks need <span>more than a face.</span></h1>
-  <p class="lede">Pair a phone, complete a fresh visual challenge, and see exactly which signals the prototype can verify today. This demonstration does not make an automated identity decision.</p>
+<main class="shell">
+  <header class="masthead"><div class="brand"><div class="mark" aria-hidden="true"><i></i><i></i><i></i></div><span>FRAME/CHECK</span></div><span class="mast-label">Independent video screening &nbsp;·&nbsp; Field desk 01</span><div class="mast-right"><span id="service-status" class="environment">SERVICE CHECKING</span><span class="api-label">LOCAL API · 8000</span></div></header>
+  <section class="hero"><div><p class="eyebrow">Video forensics / live QR screening</p><h1>Look closer.<span>Keep the evidence.</span></h1><p class="lede">Examine a live onboarding check for replay signals. Each observation is tied to a sampled moment; unavailable AI analysis stays visible.</p></div><aside class="hero-note"><strong>Scope note / 01</strong><p>No enrolled face baseline or speaker identity match is used. Licensed research classifiers screen live face frames and optional audio; scores are not calibrated proof. QR motion is a separate liveness signal.</p></aside></section>
 
-  <div class="grid">
-    <section class="card">
-      <h2>Verification session</h2>
-      <p class="muted">A short-lived session connects this browser to one phone. The pairing token expires with the session.</p>
-      <div id="start-area" class="row"><button id="start" class="btn">Start secure session <span>↗</span></button></div>
-      <div id="session-area" class="hidden">
-        <div class="row"><span class="pill" id="session-status">SESSION ACTIVE</span><span class="muted" id="expires"></span></div>
-        <div id="pair-area" class="pair">
-          <img id="pair-qr" class="qr" alt="One-time phone pairing QR code">
-          <div><strong>Pair your phone</strong><p class="muted">Scan this one-time QR using the phone you want to use for the challenge. Open the project through a reachable HTTPS address when pairing a separate device.</p></div>
+  <div class="workspace-head"><div><h2>Verification workspace</h2><p>Complete each check in order. Later tabs unlock as you finish the required steps.</p></div></div>
+  <nav class="workflow-tabs" role="tablist" aria-label="Verification steps">
+    <button id="tab-phone" class="workflow-tab" type="button" role="tab" aria-selected="true" aria-controls="panel-phone">01 · Phone</button>
+    <button id="tab-qr" class="workflow-tab" type="button" role="tab" aria-selected="false" aria-controls="panel-qr" disabled>02 · QR + video</button>
+    <button id="tab-voice" class="workflow-tab" type="button" role="tab" aria-selected="false" aria-controls="panel-voice" disabled>03 · Voice</button>
+    <button id="tab-report" class="workflow-tab" type="button" role="tab" aria-selected="false" aria-controls="panel-report" disabled>04 · Report</button>
+  </nav>
+  <div class="workspace">
+    <section id="panel-phone" class="tab-panel" role="tabpanel" aria-labelledby="tab-phone">
+      <div class="card source-card">
+        <h2>Pair and verify your phone</h2>
+        <p class="tab-intro">The phone's platform authenticator confirms local user verification. It does not identify the person in the laptop camera.</p>
+        <div id="start-area" class="row"><button id="start" class="btn">Create verification session</button></div>
+        <div id="session-area" class="hidden">
+          <div class="session-line"><span class="pill" id="session-status">SESSION ACTIVE</span><span class="muted" id="expires"></span></div>
+          <div id="pair-area" class="pair">
+            <img id="pair-qr" class="qr" alt="One-time phone pairing QR code">
+            <div class="pair-copy"><strong>Connect your phone</strong><p class="muted">Scan this one-time QR with your phone. Keep both devices online while the session is active.</p></div>
+          </div>
+          <div id="paired-area" class="hidden">
+            <p><span class="pill">PHONE PAIRED</span> <span id="phone-proof-status" class="muted">Complete local user verification on the phone to continue.</span></p>
+            <button id="challenge" class="btn" disabled>Continue to QR + video <span class="arrow">→</span></button>
+          </div>
         </div>
-        <div id="paired-area" class="hidden">
-          <p><span class="pill">PHONE PAIRED</span> <span id="phone-proof-status" class="muted">Complete local user verification on the phone to continue.</span></p>
-          <button id="challenge" class="btn" disabled>Generate challenge</button>
-        </div>
+        <p id="queue-copy" class="status">Phone check is idle. Create a session and pair a phone to begin.</p>
+        <div id="message" class="status" role="status" aria-live="polite"></div>
       </div>
-      <div id="message" class="status" role="status" aria-live="polite"></div>
     </section>
 
-    <section class="card">
-      <h2>What this prototype checks</h2>
-      <div class="step"><span class="num">1</span><p><strong>Phone pairing</strong><br><span class="muted">A random session token links the second device.</span></p></div>
-      <div class="step"><span class="num">2</span><p><strong>Fresh QR sequence</strong><br><span class="muted">The phone displays six changing, session-bound codes.</span></p></div>
-      <div class="step"><span class="num">3</span><p><strong>Live capture challenge</strong><br><span class="muted">The laptop camera scans the moving phone as you trace a slow figure eight.</span></p></div>
-      <div class="step"><span class="num">4</span><p><strong>Transparent report</strong><br><span class="muted">Unavailable AI checks stay unavailable; the prototype will not invent a pass score.</span></p></div>
+    <section id="panel-qr" class="tab-panel" role="tabpanel" aria-labelledby="tab-qr" hidden>
+      <section id="capture-card" class="card capture-card">
+        <div class="card-heading"><div><h2>QR liveness + recorded video screening</h2><p class="muted">The camera stays on until the first fresh QR is recognized. That lock starts a ten-second video recording; the server samples face crops from that clip for research-model screening.</p></div><span id="capture-mode" class="pill">CAMERA OFF</span></div>
+        <label class="consent"><input id="camera-consent" type="checkbox"><span>I consent to the live QR check and ten-second camera recording. QR preview frames and the recorded clip are sent to the API; the clip is sampled for face screening and then discarded. No video is saved to disk. The browser asks for camera permission separately.</span></label>
+        <div class="motion-directions">
+          <ol>
+            <li>Place the phone QR in the center guide. Bring it close to the laptop camera (about 15–20 cm) and hold it still so focus and auto-exposure can settle.</li>
+            <li>Wait for <strong>QR LOCK</strong>. The timed recording does not start before a valid, fresh QR is scanned. If it stays blurry, use Refresh autofocus or move the phone slightly farther away.</li>
+            <li>After the lock, move the phone slowly through one continuous figure eight in the camera plane. Keep the QR facing the camera, inside the view, and avoid glare until the ten-second recording ends.</li>
+          </ol>
+          <div><img class="motion-diagram" src="/motion-guide.svg" alt="Figure-eight path diagram with direction arrows"><a class="guide-download" href="/motion-guide.svg" download="fusion-figure-eight-guide.svg">Download figure-eight guide</a></div>
+        </div>
+        <p id="scan-directions" class="scan-directions">The guide will appear over the live viewer when the QR locks. Keep the QR steady for the initial exposure/focus step; begin the figure eight only after the lock message.</p>
+        <div class="row"><button id="capture" class="btn" disabled>Start camera and find first QR</button><span id="capture-status" class="muted" role="status" aria-live="polite">Camera is off. No frames or video are being captured.</span></div>
+        <div id="viewer" class="viewer"><div class="viewer-frame"></div><div class="viewer-empty"><strong>CAMERA OFF</strong><span>Consent, then bring the phone QR into the center guide.</span><small>RECORDING STARTS AT QR LOCK</small></div><div id="qr-tracker" class="qr-tracker hidden" aria-hidden="true"><span>QR SEARCHING</span></div><div id="motion-overlay" class="motion-overlay hidden" aria-hidden="true"><img src="/motion-guide.svg" alt=""><span>MOVE SLOWLY · FIGURE EIGHT</span></div><video id="preview" class="hidden" autoplay muted playsinline aria-label="Live camera preview used to scan the phone QR code"></video></div>
+        <div class="camera-controls" aria-label="Camera focus and exposure controls">
+          <button id="refocus-camera" class="camera-control-button" type="button" disabled>REFRESH AUTOFOCUS</button>
+          <label id="focus-control" class="camera-control hidden">FOCUS <input id="focus-distance" type="range" disabled><output id="focus-value"></output></label>
+          <label id="exposure-control" class="camera-control hidden">EXPOSURE <input id="exposure-compensation" type="range" disabled><output id="exposure-value"></output></label>
+          <label id="zoom-control" class="camera-control hidden">ZOOM <input id="camera-zoom" type="range" disabled><output id="zoom-value"></output></label>
+        </div>
+        <label id="camera-select-control" class="camera-control hidden">CAMERA <select id="camera-select" disabled aria-label="Select camera"></select></label>
+        <p id="camera-control-status" class="camera-control-status" role="status" aria-live="polite">Focus and exposure controls will be shown if this camera exposes them to the browser.</p>
+      </section>
     </section>
 
-    <section id="capture-card" class="card hidden">
-      <h2>Complete the live challenge</h2>
-      <p class="muted">Allow camera access. Keep the phone QR visible to the laptop camera and move it through a slow figure eight.</p>
-      <video id="preview" autoplay muted playsinline></video>
-      <div class="row"><button id="capture" class="btn">Start 10-second capture</button><span id="capture-status" class="muted"></span></div>
+    <section id="panel-voice" class="tab-panel" role="tabpanel" aria-labelledby="tab-voice" hidden>
+      <section class="card">
+        <h2>Optional voice screening</h2>
+        <p class="tab-intro">This is a separate, optional test. It checks a fresh spoken phrase and an AI-voice screening signal; it does not identify or match a speaker.</p>
+        <ol class="tab-intro">
+          <li>Move to a quiet place and keep the microphone about 15–25 cm away.</li>
+          <li>After you explicitly consent and start, allow microphone access, then say the displayed three-word phrase once at a natural pace.</li>
+          <li>Recording stops after eight seconds. Audio is sent for phrase and voice screening, processed in memory, and discarded.</li>
+        </ol>
+        <label class="consent"><input id="audio-consent" type="checkbox"><span>I consent to record and submit up to eight seconds of microphone audio for this phrase check and AI-voice screening. Audio is not saved and no voiceprint or speaker identity is created.</span></label>
+        <p id="voice-prompt" class="voice-result hidden" aria-live="polite"></p>
+        <p id="voice-status" class="camera-control-status" role="status" aria-live="polite">Microphone is off. You can skip this optional step and view the report.</p>
+        <div class="tab-actions">
+          <button id="run-voice" class="btn" disabled>Start voice check</button>
+          <button id="skip-voice" class="secondary-btn" type="button">Skip voice and view report</button>
+          <button id="finish-voice" class="secondary-btn hidden" type="button">Finish and view report</button>
+        </div>
+      </section>
     </section>
 
-    <section id="report-card" class="card hidden">
-      <h2>Verification evidence</h2>
-      <div class="notice">This demo reports challenge evidence only. It has no validated face deepfake, speaker verification, or audio anti-spoof model, so the final decision remains Review.</div>
-      <div id="report" class="report"></div>
-      <p id="limitations" class="foot"></p>
+    <section id="panel-report" class="tab-panel" role="tabpanel" aria-labelledby="tab-report" hidden>
+      <section id="report-card" class="card report-card">
+        <h2>Evidence summary</h2>
+        <div class="notice">Research-model scores are uncalibrated screening signals, not proof of authenticity. Speaker identity is not verified. The simulated hash ledger is not a blockchain.</div>
+        <p id="report-decision" class="report-decision" role="status" aria-live="polite"></p>
+        <div id="report" class="report"></div>
+        <p id="limitations" class="foot"></p>
+      </section>
     </section>
   </div>
-  <p class="foot">Privacy for this demo: video stays in the browser and is not yet analyzed by a classifier. Only scanned QR observations and capture duration are sent to the API. Phone biometrics stay on-device; the API receives and verifies a signed public-key assertion. Session data is in memory and clears when the API restarts.</p>
+  <footer class="page-foot"><span>Frame / Check &nbsp;·&nbsp; Local verification desk</span><span>Model output is a screening signal, not proof of identity or fraud.</span><a href="https://github.com/swapnil-1310/Swaraksha/tree/feat/video-forensics-frontend/frontend/src" target="_blank" rel="noreferrer">Reference frontend ↗</a></footer>
 </main>
 <script>
 (() => {
@@ -69,13 +234,310 @@
   let challenge = null;
   let poller = null;
   let paired = false;
+  let challengeReady = false;
+  let captureRunning = false;
+  let voiceRunning = false;
+  let reportSubmitted = false;
+  let pollDelay = 1200;
+  let trackerTimeout = null;
+  let activeCameraTrack = null;
+  let activeCameraStream = null;
+  let cameraSwitchInProgress = false;
+  let videoRecordingActive = false;
   const message = (text) => { $('message').textContent = text; };
+  const errorMessage = (error) => {
+    if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+      return 'Camera access was denied. Allow camera access for this site in your browser’s address-bar/site settings, then try again.';
+    }
+    if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+      return 'No camera was found. Connect or enable a camera, then try again.';
+    }
+    if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+      return 'The camera is busy or unavailable. Close other apps using it, then try again.';
+    }
+    if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
+      return 'The camera could not meet the requested settings. Check that it is available, then try again.';
+    }
+    if (error.name === 'SecurityError') {
+      return 'The browser blocked camera access. Open this demo on localhost or its HTTPS address and allow camera access.';
+    }
+    return error.message || 'The request could not be completed. Please try again.';
+  };
   const request = async (path, options = {}) => {
     const response = await fetch(path, { ...options, headers: { ...(options.body ? {'Content-Type':'application/json'} : {}), ...(options.headers || {}) } });
     const data = response.headers.get('content-type')?.includes('application/json') ? await response.json() : null;
-    if (!response.ok) throw new Error(data?.detail || `Request failed (${response.status})`);
+    if (!response.ok) {
+      const error = new Error(data?.detail || `Request failed (${response.status})`);
+      error.status = response.status;
+      throw error;
+    }
     return data;
   };
+  const captureVoicePhrase = async (activeChallenge) => {
+    const prompt = await request(`/api/sessions/${session.id}/challenge/${activeChallenge.id}/audio-prompt`);
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      throw new Error('This browser cannot record audio here. Use a current browser over HTTPS, or leave the optional voice check off.');
+    }
+    $('voice-prompt').textContent = `Speak this phrase once after recording starts: “${prompt.phrase}”. You have up to eight seconds.`;
+    $('voice-prompt').classList.remove('hidden');
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true},
+      video: false,
+    });
+    try {
+      const mimeType = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4']
+        .find(type => MediaRecorder.isTypeSupported(type));
+      const recorder = mimeType ? new MediaRecorder(stream, {mimeType}) : new MediaRecorder(stream);
+      const chunks = [];
+      const recording = new Promise((resolve, reject) => {
+        recorder.addEventListener('dataavailable', event => {
+          if (event.data.size) chunks.push(event.data);
+        });
+        recorder.addEventListener('error', () => reject(new Error('The browser could not record the microphone input.')));
+        recorder.addEventListener('stop', () => resolve(new Blob(chunks, {type: recorder.mimeType || 'audio/webm'})), {once:true});
+        recorder.start();
+        $('voice-status').textContent = 'Recording now. Say the phrase once at a natural pace; recording stops automatically after eight seconds.';
+        setTimeout(() => {
+          if (recorder.state !== 'inactive') recorder.stop();
+        }, 8_000);
+      });
+      const blob = await recording;
+      if (!blob.size) throw new Error('No microphone audio was captured. Check microphone permission and try again.');
+      const result = await request(`/api/sessions/${session.id}/challenge/${activeChallenge.id}/audio`, {
+        method: 'POST',
+        body: blob,
+        headers: {
+          'Content-Type': blob.type || 'audio/webm',
+          'X-Audio-Consent': 'true',
+        },
+      });
+      $('voice-status').textContent = `Voice check complete · phrase ${result.phrase_check.status.toUpperCase()} · AI-voice screening ${result.anti_spoof_check.status.toUpperCase()}. Audio was processed and discarded.`;
+      return result;
+    } finally {
+      stream.getTracks().forEach(track => track.stop());
+    }
+  };
+  const cameraCapabilities = (track) => typeof track.getCapabilities === 'function' ? track.getCapabilities() : {};
+  const setCameraMode = async (track, capabilities, key, value) => {
+    if (!capabilities[key]?.includes(value)) return false;
+    await track.applyConstraints({advanced: [{[key]: value}]});
+    return true;
+  };
+  const cameraStreamConstraints = (deviceId = null) => ({
+    video: {
+      ...(deviceId ? {deviceId: {exact: deviceId}} : {facingMode: 'user'}),
+      width: {ideal: 1920},
+      height: {ideal: 1080},
+      frameRate: {ideal: 30},
+    },
+    audio: false,
+  });
+  const setRangeControl = (id, controlId, outputId, capability, setting, digits = 1) => {
+    if (!capability) return false;
+    const input = $(id);
+    input.min = String(capability.min);
+    input.max = String(capability.max);
+    input.step = String(capability.step || Math.max((capability.max - capability.min) / 100, 0.01));
+    const current = activeCameraTrack.getSettings()[setting];
+    input.value = String(Math.min(capability.max, Math.max(capability.min, current ?? capability.min)));
+    input.disabled = false;
+    $(controlId).classList.remove('hidden');
+    $(outputId).value = Number(input.value).toFixed(digits);
+    return true;
+  };
+  const populateCameraChoices = async (selectedId) => {
+    if (!navigator.mediaDevices.enumerateDevices) return;
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cameras = devices.filter(device => device.kind === 'videoinput');
+    const control = $('camera-select-control');
+    const select = $('camera-select');
+    if (cameras.length < 2) {
+      control.classList.add('hidden');
+      return;
+    }
+    select.replaceChildren();
+    cameras.forEach((camera, index) => {
+      const option = document.createElement('option');
+      option.value = camera.deviceId;
+      option.textContent = camera.label || `Camera ${index + 1}`;
+      option.selected = camera.deviceId === selectedId;
+      select.append(option);
+    });
+    select.disabled = false;
+    control.classList.remove('hidden');
+  };
+  const configureCameraControls = async (track) => {
+    activeCameraTrack = track;
+    $('focus-control').classList.add('hidden');
+    $('focus-distance').disabled = true;
+    $('exposure-control').classList.add('hidden');
+    $('exposure-compensation').disabled = true;
+    $('zoom-control').classList.add('hidden');
+    $('camera-select').disabled = true;
+    const capabilities = cameraCapabilities(track);
+    const notes = [];
+    let autofocus = false;
+    try {
+      autofocus = await setCameraMode(track, capabilities, 'focusMode', 'continuous');
+    } catch (error) {
+      notes.push(`Continuous autofocus was rejected (${error.name}); use the camera's default focus.`);
+    }
+    try {
+      const autoExposure = await setCameraMode(track, capabilities, 'exposureMode', 'continuous');
+      if (autoExposure) notes.push('Continuous exposure on.');
+    } catch (error) {
+      notes.push(`Continuous exposure was rejected (${error.name}); use the camera's default exposure.`);
+    }
+
+    const focusRange = capabilities.focusDistance;
+    if (capabilities.focusMode?.includes('manual') && focusRange) {
+      setRangeControl('focus-distance', 'focus-control', 'focus-value', focusRange, 'focusDistance', 2);
+    }
+
+    const exposureRange = capabilities.exposureCompensation;
+    if (exposureRange) {
+      setRangeControl('exposure-compensation', 'exposure-control', 'exposure-value', exposureRange, 'exposureCompensation');
+    }
+
+    if (capabilities.zoom) {
+      setRangeControl('camera-zoom', 'zoom-control', 'zoom-value', capabilities.zoom, 'zoom');
+    }
+
+    notes.unshift(autofocus
+      ? 'Continuous autofocus on.'
+      : capabilities.focusMode?.includes('manual')
+        ? 'Continuous autofocus unavailable; manual focus slider shown.'
+        : 'Camera does not expose focus controls; built-in focus is in use.');
+    $('camera-control-status').textContent = notes.join(' ');
+    $('refocus-camera').disabled = false;
+    await populateCameraChoices(track.getSettings().deviceId);
+  };
+  const applyCameraSlider = async (key, value, outputId) => {
+    if (!activeCameraTrack || activeCameraTrack.readyState !== 'live') {
+      $('camera-control-status').textContent = 'The camera is not active. Start a QR scan to adjust it.';
+      return;
+    }
+    try {
+      if (key === 'focusDistance') {
+        const capabilities = cameraCapabilities(activeCameraTrack);
+        await setCameraMode(activeCameraTrack, capabilities, 'focusMode', 'manual');
+      }
+      await activeCameraTrack.applyConstraints({advanced: [{[key]: value}]});
+      $(outputId).value = Number(value).toFixed(key === 'focusDistance' ? 2 : 1);
+      $('camera-control-status').textContent = key === 'focusDistance'
+        ? 'Manual focus updated. Use REFRESH AUTOFOCUS to restore automatic focus.'
+        : key === 'zoom'
+          ? 'Camera zoom updated. Keep the QR fully inside the viewer.'
+          : 'Exposure compensation updated.';
+    } catch (error) {
+      $('camera-control-status').textContent = `The camera rejected the ${key === 'focusDistance' ? 'focus' : 'exposure'} adjustment (${error.name}).`;
+    }
+  };
+  const switchCamera = async (deviceId) => {
+    if (!captureRunning || videoRecordingActive || cameraSwitchInProgress || !deviceId) return;
+    cameraSwitchInProgress = true;
+    const select = $('camera-select');
+    select.disabled = true;
+    const previousStream = activeCameraStream;
+    const previousTrack = activeCameraTrack;
+    let nextStream;
+    try {
+      nextStream = await navigator.mediaDevices.getUserMedia(cameraStreamConstraints(deviceId));
+      const nextTrack = nextStream.getVideoTracks()[0];
+      $('preview').srcObject = nextStream;
+      await $('preview').play();
+      activeCameraStream = nextStream;
+      try {
+        await configureCameraControls(nextTrack);
+      } catch (error) {
+        activeCameraStream = previousStream;
+        activeCameraTrack = previousTrack;
+        $('preview').srcObject = previousStream;
+        nextStream.getTracks().forEach(track => track.stop());
+        throw error;
+      }
+      if (previousStream && previousStream !== nextStream) previousStream.getTracks().forEach(track => track.stop());
+      const video = $('preview');
+      if (video.videoWidth && video.videoHeight) {
+        const width = Math.min(1280, video.videoWidth);
+        const canvas = $('scan-canvas');
+        canvas.width = width;
+        canvas.height = Math.round(width * video.videoHeight / video.videoWidth);
+      }
+      $('camera-control-status').textContent = `Camera switched to ${nextTrack.label || 'selected camera'}.`;
+    } catch (error) {
+      if (nextStream && nextStream !== activeCameraStream) nextStream.getTracks().forEach(track => track.stop());
+      if (activeCameraStream === previousStream) {
+        activeCameraTrack = previousTrack;
+        $('preview').srcObject = previousStream;
+      }
+      $('camera-control-status').textContent = `Could not switch cameras (${error.name}). The previous camera remains active.`;
+      const currentId = previousTrack?.getSettings().deviceId;
+      if (currentId) select.value = currentId;
+    } finally {
+      cameraSwitchInProgress = false;
+      select.disabled = false;
+    }
+  };
+  const positionQrTracker = (result) => {
+    const tracker = $('qr-tracker');
+    if (result.box_x == null || result.box_y == null || result.box_width == null || result.box_height == null) {
+      if (!tracker.classList.contains('hidden')) {
+        tracker.classList.add('is-stale');
+        tracker.querySelector('span').textContent = 'QR SEARCHING…';
+      }
+      if (trackerTimeout) clearTimeout(trackerTimeout);
+      trackerTimeout = setTimeout(() => tracker.classList.add('hidden'), 650);
+      return;
+    }
+    if (trackerTimeout) clearTimeout(trackerTimeout);
+    const viewer = $('viewer').getBoundingClientRect();
+    const video = $('preview');
+    const width = video.videoWidth;
+    const height = video.videoHeight;
+    if (!width || !height || !viewer.width || !viewer.height) return;
+    const contentWidth = Math.min(viewer.width, viewer.height * width / height);
+    const contentHeight = Math.min(viewer.height, viewer.width * height / width);
+    const offsetX = (viewer.width - contentWidth) / 2;
+    const offsetY = (viewer.height - contentHeight) / 2;
+    tracker.style.left = `${offsetX + result.box_x * contentWidth}px`;
+    tracker.style.top = `${offsetY + result.box_y * contentHeight}px`;
+    tracker.style.width = `${result.box_width * contentWidth}px`;
+    tracker.style.height = `${result.box_height * contentHeight}px`;
+    tracker.querySelector('span').textContent = result.payload ? 'QR LOCK · VALID SIGNAL' : 'QR FOUND · HOLD STEADY';
+    tracker.classList.remove('is-stale');
+    tracker.classList.remove('hidden');
+  };
+  const checkService = async () => {
+    const status = $('service-status');
+    try {
+      const health = await request('/health');
+      if (health.status !== 'ok') throw new Error('The API returned an unexpected health status.');
+      status.textContent = 'SERVICE ONLINE';
+      status.classList.add('online');
+    } catch (error) {
+      status.textContent = 'SERVICE OFFLINE';
+      status.classList.remove('online');
+    }
+  };
+  checkService();
+  const stages = ['phone', 'qr', 'voice', 'report'];
+  const activateStage = (stage) => {
+    const tab = $(`tab-${stage}`);
+    if (!tab || tab.disabled) return;
+    for (const name of stages) {
+      const selected = name === stage;
+      $(`tab-${name}`).setAttribute('aria-selected', String(selected));
+      $(`panel-${name}`).hidden = !selected;
+    }
+  };
+  stages.forEach((stage) => $(`tab-${stage}`).addEventListener('click', () => {
+    if (captureRunning && stage !== 'qr') {
+      message('Stay on QR + video while the camera capture is running.');
+      return;
+    }
+    activateStage(stage);
+  }));
   const showPairState = (isPaired, isVerified = false) => {
     paired = isPaired;
     $('pair-area').classList.toggle('hidden', paired);
@@ -83,7 +545,10 @@
     $('session-status').textContent = isVerified ? 'PHONE VERIFIED' : paired ? 'PHONE PAIRED' : 'SESSION ACTIVE';
     $('phone-proof-status').textContent = isVerified ? 'Local user verification succeeded. Ready for the challenge.' : 'Complete local user verification on the phone to continue.';
     $('challenge').disabled = !isVerified;
-    if (isVerified && poller) { clearInterval(poller); poller = null; message('Phone user verification succeeded. Generate the QR challenge when ready.'); }
+    $('challenge').classList.toggle('action-ready', isVerified);
+    $('tab-qr').disabled = !isVerified;
+    $('queue-copy').textContent = isVerified ? 'Phone verified locally. Continue to the QR + video tab when ready.' : paired ? 'Phone paired. Waiting for local user verification.' : 'Create a session and pair a phone to begin.';
+    if (isVerified && poller) { clearTimeout(poller); poller = null; message('Phone user verification succeeded. Continue to the QR + video tab.'); }
   };
   $('start').addEventListener('click', async () => {
     $('start').disabled = true;
@@ -94,74 +559,343 @@
       $('session-area').classList.remove('hidden');
       $('expires').textContent = `Expires ${new Date(session.expires_at).toLocaleTimeString()}`;
       $('pair-qr').src = `/api/sessions/${session.id}/pairing-qr`;
-      poller = setInterval(async () => {
+      $('queue-copy').textContent = 'Pairing QR issued. Waiting for a phone to connect.';
+      const pollSession = async () => {
         try {
           const current = await request(`/api/sessions/${session.id}`);
-          if (current.status === 'expired') { clearInterval(poller); message('Session expired. Start a new one.'); return; }
+          if (current.status === 'expired') { poller = null; message('Session expired. Reload the page to start a new session.'); return; }
           if (current.paired) showPairState(true, current.phone_verified);
-        } catch (error) { message(error.message); }
-      }, 1200);
+          pollDelay = 1200;
+        } catch (error) {
+          message(errorMessage(error));
+          pollDelay = Math.min(pollDelay * 2, 8000);
+        } finally {
+          if (poller !== null) poller = setTimeout(pollSession, pollDelay);
+        }
+      };
+      poller = setTimeout(pollSession, pollDelay);
       message('Scan the pairing QR with your phone.');
-    } catch (error) { message(error.message); $('start').disabled = false; }
+    } catch (error) { message(errorMessage(error)); $('start').disabled = false; }
   });
   $('challenge').addEventListener('click', async () => {
     $('challenge').disabled = true;
-    try {
-      challenge = await request(`/api/sessions/${session.id}/challenge`, { method: 'POST' });
-      $('capture').disabled = false;
-      $('capture').textContent = 'Start 10-second capture';
-      $('capture-card').classList.remove('hidden');
-      message('Challenge issued. Your phone will display the changing QR sequence.');
-      $('capture-card').scrollIntoView({behavior:'smooth', block:'center'});
-    } catch (error) { message(error.message); $('challenge').disabled = false; }
+    $('challenge').classList.remove('action-ready');
+    challenge = null;
+    challengeReady = true;
+    reportSubmitted = false;
+    $('tab-voice').disabled = true;
+    $('tab-report').disabled = true;
+    $('camera-consent').checked = false;
+    $('audio-consent').checked = false;
+    $('voice-prompt').classList.add('hidden');
+    $('voice-status').textContent = 'Microphone is off. You can skip this optional step and view the report.';
+    $('run-voice').classList.remove('hidden');
+    $('run-voice').disabled = true;
+    $('skip-voice').classList.remove('hidden');
+    $('skip-voice').disabled = false;
+    $('finish-voice').classList.add('hidden');
+    $('finish-voice').disabled = false;
+    $('tab-voice').disabled = true;
+    $('tab-report').disabled = true;
+    $('report').replaceChildren();
+    $('report-decision').textContent = '';
+    $('limitations').textContent = '';
+    $('capture').disabled = true;
+    $('capture').textContent = 'Start camera and find first QR';
+    $('capture-status').textContent = 'Camera is off. Recording begins only after the first valid QR lock.';
+    $('capture-mode').textContent = 'CAMERA OFF';
+    $('tab-qr').disabled = false;
+    activateStage('qr');
+    message('Review the QR and video directions, then agree to camera use.');
   });
+  $('camera-consent').addEventListener('change', (event) => {
+    const ready = event.currentTarget.checked && challengeReady;
+    $('capture').disabled = !ready;
+    $('capture').classList.toggle('action-ready', ready);
+    $('capture-status').classList.toggle('ready-status', ready);
+    if (ready) $('capture-status').textContent = 'READY — the camera will wait for the first valid QR before recording starts.';
+  });
+  $('audio-consent').addEventListener('change', (event) => {
+    $('run-voice').disabled = !event.currentTarget.checked || voiceRunning;
+  });
+  $('refocus-camera').addEventListener('click', async () => {
+    if (!activeCameraTrack || activeCameraTrack.readyState !== 'live') {
+      $('camera-control-status').textContent = 'Start a QR scan before refreshing camera focus.';
+      return;
+    }
+    const track = activeCameraTrack;
+    const capabilities = cameraCapabilities(track);
+    try {
+      if (capabilities.focusMode?.includes('single-shot')) {
+        await setCameraMode(track, capabilities, 'focusMode', 'single-shot');
+        $('camera-control-status').textContent = 'One-shot autofocus requested. Hold the phone steady 25–50 cm from the camera while it focuses.';
+        setTimeout(async () => {
+          if (activeCameraTrack !== track || track.readyState !== 'live') return;
+          try {
+            await setCameraMode(track, cameraCapabilities(track), 'focusMode', 'continuous');
+          } catch (error) {
+            $('camera-control-status').textContent = `One-shot focus ran, but continuous autofocus could not be restored (${error.name}).`;
+          }
+        }, 900);
+      } else {
+        const applied = await setCameraMode(activeCameraTrack, capabilities, 'focusMode', 'continuous');
+        $('camera-control-status').textContent = applied
+          ? 'Continuous autofocus requested again. Hold the phone steady 25–50 cm from the camera.'
+          : 'This camera does not expose autofocus controls; move the phone farther away and use its built-in focus.';
+      }
+    } catch (error) {
+      $('camera-control-status').textContent = `The camera rejected the autofocus request (${error.name}). Its built-in focus remains in use.`;
+    }
+  });
+  $('focus-distance').addEventListener('change', (event) => applyCameraSlider('focusDistance', Number(event.currentTarget.value), 'focus-value'));
+  $('exposure-compensation').addEventListener('change', (event) => applyCameraSlider('exposureCompensation', Number(event.currentTarget.value), 'exposure-value'));
+  $('camera-zoom').addEventListener('change', (event) => applyCameraSlider('zoom', Number(event.currentTarget.value), 'zoom-value'));
+  $('camera-select').addEventListener('change', (event) => switchCamera(event.currentTarget.value));
+  const beginVideoRecording = (source) => {
+    if (!window.MediaRecorder) throw new Error('This browser cannot record video. Use a current Chrome or Edge browser.');
+    const mimeType = ['video/webm;codecs=vp8', 'video/webm;codecs=vp9', 'video/webm', 'video/mp4']
+      .find(type => MediaRecorder.isTypeSupported(type));
+    const recorder = mimeType
+      ? new MediaRecorder(source, {mimeType, videoBitsPerSecond: 800_000})
+      : new MediaRecorder(source);
+    const chunks = [];
+    let recordingError = null;
+    const completed = new Promise(resolve => {
+      recorder.addEventListener('dataavailable', event => {
+        if (event.data.size) chunks.push(event.data);
+      });
+      recorder.addEventListener('error', event => {
+        recordingError = event.error || new Error('The browser could not record the video.');
+      });
+      recorder.addEventListener('stop', () => {
+        resolve({blob: new Blob(chunks, {type: recorder.mimeType || 'video/webm'}), error: recordingError});
+      }, {once: true});
+    });
+    recorder.start(250);
+    return {recorder, completed};
+  };
   $('capture').addEventListener('click', async () => {
     const button = $('capture');
     button.disabled = true;
+    button.classList.remove('action-ready');
+    $('capture-status').classList.remove('ready-status');
+    captureRunning = true;
+    activateStage('qr');
+    $('tab-phone').disabled = true;
     let stream;
-    const observations = [];
-    const started = performance.now();
+    let recorder = null;
+    let recordingCompleted = null;
     try {
-      if (!('BarcodeDetector' in window)) throw new Error('QR scanning needs a Chromium-based browser with BarcodeDetector (for example, current Chrome or Edge).');
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: {ideal: 1280}, height: {ideal: 720} }, audio: false });
+      if (!$('camera-consent').checked) throw new Error('Please agree to the camera use described above before continuing.');
+      if (!window.isSecureContext) throw new Error('Camera access requires localhost or HTTPS. Open the HTTPS address from the launcher, or use localhost for laptop-only testing.');
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error('This browser does not provide camera access. Use a current version of Chrome or Edge over HTTPS.');
+      if (!window.MediaRecorder) throw new Error('This browser cannot record video. Use a current Chrome or Edge browser.');
+      $('capture-status').textContent = 'Loading the live face-screening model. First use may download several hundred MB; the camera is still off.';
+      const modelStatus = await request('/api/models/warmup', {
+        method: 'POST',
+        body: JSON.stringify({audio_consent: false}),
+      });
+      const videoStatus = modelStatus.video;
+      $('capture-status').textContent = videoStatus.status === 'ready'
+        ? 'Face-screening model is ready. Requesting camera permission…'
+        : `QR and video recording can continue, but AI face screening is ${videoStatus.status}: ${videoStatus.detail || 'model not loaded'}`;
+      stream = await navigator.mediaDevices.getUserMedia(cameraStreamConstraints());
+      activeCameraStream = stream;
+      await configureCameraControls(stream.getVideoTracks()[0]);
       $('preview').srcObject = stream;
+      $('preview').classList.remove('hidden');
+      $('viewer').classList.add('streaming');
       await $('preview').play();
-      const detector = new BarcodeDetector({formats:['qr_code']});
-      $('capture-status').textContent = 'Scanning phone codes… keep moving';
-      const stopAt = started + 10_000;
-      while (performance.now() < stopAt) {
-        try {
-          const codes = await detector.detect($('preview'));
-          const box = codes[0]?.boundingBox;
-          if (codes.length && box && $('preview').videoWidth && $('preview').videoHeight) {
-            observations.push({payload: codes[0].rawValue, elapsed_ms: Math.round(performance.now()-started), x: Math.max(0,Math.min(1,(box.x+box.width/2)/$('preview').videoWidth)), y: Math.max(0,Math.min(1,(box.y+box.height/2)/$('preview').videoHeight))});
-          }
-        } catch (_) { /* A missed frame is expected while the phone moves. */ }
-        await new Promise(resolve => setTimeout(resolve, 120));
+      if (!$('preview').videoWidth || !$('preview').videoHeight) throw new Error('The camera opened but did not provide a usable video stream. Check camera access and try again.');
+      const canvas = document.createElement('canvas');
+      canvas.id = 'scan-canvas';
+      canvas.width = Math.min(1280, $('preview').videoWidth);
+      canvas.height = Math.round(canvas.width * $('preview').videoHeight / $('preview').videoWidth);
+      const highestResolution = stream.getVideoTracks()[0].getCapabilities()?.width?.max;
+      if (highestResolution && stream.getVideoTracks()[0].getSettings().width < highestResolution) {
+        $('camera-control-status').textContent += ' The camera may support a higher native resolution; scan frames are sent at up to 1280 px wide.';
       }
-      const capturedDuration = Math.round(performance.now()-started);
-      stream.getTracks().forEach(track => track.stop());
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Could not prepare a camera frame for QR scanning. Reload the page and try again.');
+      if (!challenge || challenge.status !== 'active' || Date.now() >= Date.parse(challenge.expires_at)) {
+        challenge = await request(`/api/sessions/${session.id}/challenge`, { method: 'POST' });
+      }
+      $('capture-mode').textContent = 'WAITING FOR QR LOCK';
+      $('capture-status').textContent = 'Hold the phone QR close to the camera and still. Focus and auto-exposure are settling; the ten-second recording starts only when the first fresh QR is recognized.';
+      let firstQrAt = null;
+      const scanStartedAt = performance.now();
+      while (firstQrAt === null || performance.now() - firstQrAt < 10_000) {
+        if (!activeCameraStream || activeCameraStream.getTracks().some(track => track.readyState !== 'live')) throw new Error('Camera access ended during the challenge. Allow camera access and try again.');
+        if (Date.now() >= Date.parse(challenge.expires_at)) throw new Error('The challenge expired before the first QR lock. Start a fresh QR + video check.');
+        const cycleStartedAt = performance.now();
+        context.drawImage($('preview'), 0, 0, canvas.width, canvas.height);
+        const frame = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+        if (!frame) throw new Error('Could not prepare a camera frame. Check the camera and try again.');
+        const elapsed = Math.min(30_000, Math.round(performance.now() - scanStartedAt));
+        const response = await fetch(`/api/sessions/${session.id}/challenge/${challenge.id}/scan?elapsed_ms=${elapsed}`, {method:'POST',headers:{'Content-Type':'image/jpeg'},body:frame,cache:'no-store'});
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.detail || `QR scan failed (${response.status}).`);
+        positionQrTracker(result);
+        if (firstQrAt === null && result.payload) {
+          firstQrAt = performance.now();
+          ({recorder, completed: recordingCompleted} = beginVideoRecording(stream));
+          videoRecordingActive = true;
+          $('camera-select').disabled = true;
+          $('motion-overlay').classList.remove('hidden');
+          $('capture-mode').textContent = 'RECORDING · 10 SEC';
+          $('capture-status').textContent = 'QR LOCKED. Recording and face-video sampling have started; now move slowly through the figure eight while keeping the code facing the camera.';
+        }
+        if (firstQrAt !== null) {
+          const remainingSeconds = Math.max(0, Math.ceil((10_000 - (performance.now() - firstQrAt)) / 1000));
+          $('capture-mode').textContent = `RECORDING · ${remainingSeconds} SEC`;
+        }
+        const remaining = 250 - (performance.now() - cycleStartedAt);
+        if (remaining > 0) await new Promise(resolve => setTimeout(resolve, remaining));
+      }
+      if (!recorder || !recordingCompleted) throw new Error('The camera never locked onto a valid QR. Keep the code still and retry.');
+      if (recorder.state !== 'inactive') recorder.stop();
+      const recording = await recordingCompleted;
+      videoRecordingActive = false;
+      if (recording.error) throw recording.error;
+      if (!recording.blob.size) throw new Error('The camera recording was empty. Check browser camera permission and retry.');
+      if (activeCameraStream) activeCameraStream.getTracks().forEach(track => track.stop());
+      stream = null;
+      activeCameraTrack = null;
+      activeCameraStream = null;
+      $('camera-select').disabled = true;
+      $('refocus-camera').disabled = true;
+      $('focus-distance').disabled = true;
+      $('exposure-compensation').disabled = true;
+      $('camera-control-status').textContent = 'Camera stopped. Focus and exposure controls are available during a live scan.';
+      $('qr-tracker').classList.add('hidden');
+      $('motion-overlay').classList.add('hidden');
       $('preview').srcObject = null;
-      $('capture-status').textContent = 'Checking the randomized sequence…';
-      const report = await request(`/api/sessions/${session.id}/evidence`, {method:'POST', body: JSON.stringify({challenge_id: challenge.id, observations, captured_duration_ms:capturedDuration, audio_duration_ms: 0})});
-      renderReport(report);
-      $('capture-status').textContent = `Scanned ${observations.length} QR observations.`;
+      $('preview').classList.add('hidden');
+      $('viewer').classList.remove('streaming');
+      $('capture-status').textContent = 'Video recorded. Uploading the clip for in-memory frame sampling and AI face screening…';
+      const videoResult = await request(`/api/sessions/${session.id}/challenge/${challenge.id}/video`, {
+        method: 'POST',
+        body: recording.blob,
+        headers: {
+          'Content-Type': recording.blob.type || 'video/webm',
+          'X-Video-Consent': 'true',
+        },
+      });
+      challengeReady = false;
+      $('capture-mode').textContent = 'VIDEO SCREENED';
+      $('capture-status').textContent = `QR + video check complete · ${videoResult.frames_sampled} sampled frames, ${videoResult.frames_with_faces} with detected faces. ${videoResult.detail}`;
+      $('queue-copy').textContent = 'QR sequence and recorded video screening complete. Continue to the optional voice tab or skip it.';
+      $('tab-voice').disabled = false;
+      $('tab-qr').disabled = false;
+      $('challenge').disabled = true;
+      activateStage('voice');
     } catch (error) {
-      if (stream) stream.getTracks().forEach(track => track.stop());
+      if (recorder && recorder.state !== 'inactive') {
+        recorder.stop();
+        if (recordingCompleted) await recordingCompleted;
+      }
+      videoRecordingActive = false;
+      if (activeCameraStream) activeCameraStream.getTracks().forEach(track => track.stop());
+      else if (stream) stream.getTracks().forEach(track => track.stop());
+      activeCameraTrack = null;
+      activeCameraStream = null;
+      $('camera-select').disabled = true;
+      $('refocus-camera').disabled = true;
+      $('focus-distance').disabled = true;
+      $('exposure-compensation').disabled = true;
       $('preview').srcObject = null;
-      $('capture-status').textContent = '';
-      message(error.message);
-      button.disabled = false;
+      $('preview').classList.add('hidden');
+      $('viewer').classList.remove('streaming');
+      $('qr-tracker').classList.add('hidden');
+      $('motion-overlay').classList.add('hidden');
+      $('capture-status').textContent = errorMessage(error);
+      message(errorMessage(error));
+      button.textContent = 'Retry QR + video check';
+      button.disabled = !$('camera-consent').checked || !challengeReady;
+    } finally {
+      captureRunning = false;
+      $('tab-phone').disabled = false;
     }
   });
+  $('run-voice').addEventListener('click', async () => {
+    if (!challenge || !$('audio-consent').checked || voiceRunning) return;
+    voiceRunning = true;
+    $('run-voice').disabled = true;
+    $('skip-voice').disabled = true;
+    $('voice-status').textContent = 'Preparing the optional voice models. The microphone remains off until model setup finishes.';
+    try {
+      const models = await request('/api/models/warmup', {
+        method: 'POST',
+        body: JSON.stringify({audio_consent: true}),
+      });
+      $('voice-status').textContent = models.audio.status === 'ready'
+        ? 'Voice models ready. Requesting microphone permission…'
+        : `Voice models report ${models.audio.status}; the check may return unavailable. Requesting microphone permission…`;
+      await captureVoicePhrase(challenge);
+      $('finish-voice').classList.remove('hidden');
+      $('skip-voice').classList.add('hidden');
+      $('run-voice').classList.add('hidden');
+    } catch (error) {
+      $('voice-status').textContent = `Voice check unavailable: ${errorMessage(error)} No audio was retained. You can retry or skip this optional check.`;
+      $('skip-voice').disabled = false;
+    } finally {
+      voiceRunning = false;
+      $('run-voice').disabled = !$('audio-consent').checked;
+    }
+  });
+  $('skip-voice').addEventListener('click', submitReport);
+  $('finish-voice').addEventListener('click', submitReport);
+  async function submitReport() {
+    if (!challenge || reportSubmitted) return;
+    reportSubmitted = true;
+    $('skip-voice').disabled = true;
+    $('finish-voice').disabled = true;
+    $('voice-status').textContent = 'Preparing the evidence report…';
+    try {
+      const report = await request(`/api/sessions/${session.id}/evidence`, {
+        method: 'POST',
+        body: JSON.stringify({
+          challenge_id: challenge.id,
+          observations: [],
+          captured_duration_ms: 0,
+          audio_duration_ms: 0,
+        }),
+      });
+      renderReport(report);
+      $('voice-status').textContent = 'Report ready. This research prototype does not make a KYC decision.';
+    } catch (error) {
+      reportSubmitted = false;
+      $('skip-voice').disabled = false;
+      $('finish-voice').disabled = false;
+      $('voice-status').textContent = `Could not prepare the report: ${errorMessage(error)}`;
+    }
+  }
   function renderReport(report) {
-    const labels = {phone_pairing:'Phone pairing',phone_user_verification:'Phone user verification',randomized_qr_sequence:'Randomized QR sequence',phone_motion:'Phone movement',face_deepfake_analysis:'Face/deepfake classifier',speaker_verification:'Speaker verification',audio_spoof_detection:'Audio spoof detection',capture_quality:'Capture quality'};
-    $('report').innerHTML = Object.entries(report.checks).map(([key, value]) => `<div class="check"><span>${labels[key] || key}</span><small>${value.status.toUpperCase()} · ${value.detail}</small></div>`).join('');
+    const labels = {phone_pairing:'Phone pairing',phone_user_verification:'Phone user verification',randomized_qr_sequence:'Randomized QR sequence',phone_motion:'Phone movement',challenge_path_coherence:'Figure-eight path coherence',face_deepfake_analysis:'Live face/deepfake screening',video_temporal_consistency:'Cross-frame video consistency',speaker_verification:'Speaker identity match (not used)',random_phrase_verification:'Fresh phrase verification',audio_spoof_detection:'Audio anti-spoof screening',capture_quality:'Capture quality'};
+    const reportElement = $('report');
+    reportElement.replaceChildren();
+    Object.entries(report.checks).forEach(([key, value]) => {
+      const row = document.createElement('div');
+      const name = document.createElement('span');
+      const detail = document.createElement('small');
+      row.className = 'check';
+      name.textContent = labels[key] || key;
+      detail.textContent = `${value.status.toUpperCase()} · ${value.detail}`;
+      row.append(name, detail);
+      reportElement.append(row);
+    });
+    const decisions = {
+      review: 'REVIEW · Challenge completed; research-model outputs are signals only and need human evaluation.',
+      inconclusive: 'INCONCLUSIVE · Evidence was insufficient; capture quality or unavailable checks need attention.',
+      challenge_failed: 'CHALLENGE FAILED · The required randomized QR sequence was not completed.',
+    };
+    $('report-decision').textContent = decisions[report.decision] || `RESULT · ${report.decision}`;
     $('limitations').textContent = report.limitations.join(' ');
+    $('limitations').textContent += ` Audit: ${report.audit.system}; record ${report.audit.sequence} · ${report.audit.record_hash}.`;
     $('challenge').disabled = false;
-    $('challenge').textContent = 'Start a fresh challenge';
-    $('report-card').classList.remove('hidden');
-    $('report-card').scrollIntoView({behavior:'smooth',block:'center'});
+    $('challenge').textContent = 'Prepare another examination';
+    $('tab-report').disabled = false;
+    activateStage('report');
   }
 })();
 </script>
