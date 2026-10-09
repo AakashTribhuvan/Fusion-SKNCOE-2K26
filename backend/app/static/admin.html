@@ -57,26 +57,26 @@
 <body>
   <div class="shell">
     <header>
-      <div class="brand">FRAME / CHECK<span>Operator controls · local computer only</span></div>
+      <div class="brand">FRAME / CHECK<span>Operator controls · exposed wherever this demo is reachable</span></div>
       <a href="/">Back to verification ↗</a>
     </header>
     <main>
       <section class="intro">
-        <p class="eyebrow">Local operator page</p>
+        <p class="eyebrow">Operator page · development only</p>
         <h1>Session controls</h1>
-        <p>Monitor in-memory demo sessions and recover a video step that is genuinely stuck. This operator page works only when opened directly on the server computer.</p>
+        <p>Monitor in-memory demo sessions and recover a QR or video step that is genuinely stuck. When the demo is shared through Cloudflare, this page and its controls are also reachable through that public URL.</p>
       </section>
       <aside class="warning">
-        <strong>Overrides are recorded as skipped, never passed.</strong>
-        A video override discards screening results, unblocks the optional voice/report steps, and forces the final report to be inconclusive. The operator reason and time appear in that report.
+        <strong>Anyone with the public demo URL can use these passwordless controls.</strong>
+        Only enable this during a supervised development demo. Skipping a QR code advances the paired phone to the next code but does not create scan evidence; skipping any QR code makes the final report inconclusive. A video override discards screening results and also makes the report inconclusive. Reasons and times are recorded in the report. Disable admin controls when the demo ends.
       </aside>
       <section class="panel" aria-labelledby="sessions-heading">
         <div class="list-heading">
-          <div><h2 id="sessions-heading">Recent sessions</h2><p>Only session metadata is shown here; phone tokens, QR codes, and evidence are never listed.</p></div>
+          <div><h2 id="sessions-heading">Recent sessions</h2><p>Only session metadata is shown here; phone tokens, QR codes, and media evidence are never listed.</p></div>
           <span id="session-count">Loading…</span>
         </div>
-        <p id="refresh-status" role="status" aria-live="polite">Connecting to the local server…</p>
-        <div id="sessions"><div class="empty">Loading local sessions…</div></div>
+        <p id="refresh-status" role="status" aria-live="polite">Connecting to the server…</p>
+        <div id="sessions"><div class="empty">Loading sessions…</div></div>
       </section>
     </main>
   </div>
@@ -138,9 +138,54 @@
           const facts = element('div', 'facts');
           addFact(facts, 'Session', session.status);
           addFact(facts, 'Phone verified', session.phone_verified ? 'Yes' : 'No');
+          addFact(facts, 'Current phone QR', session.current_qr_step == null ? '—' : `${session.current_qr_step + 1}/${session.qr_step_count}`);
           addFact(facts, 'QR targets reached', `${session.qr_targets_reached}/6`);
+          addFact(facts, 'QR codes skipped', `${session.qr_steps_skipped}/${session.qr_step_count}`);
           addFact(facts, 'Report', session.report_ready ? 'Ready' : 'Not submitted');
           card.append(facts);
+
+          if (session.qr_step_overrides?.length) {
+            const note = element('p', 'override-note');
+            note.textContent = `Manual QR skips · ${session.qr_step_overrides.map(item => `step ${item.step + 1}: ${item.reason} · ${displayTime(item.at)}`).join(' | ')}. Skipped codes are not verified; the report will be inconclusive.`;
+            card.append(note);
+          }
+
+          if (session.can_skip_qr_step && session.challenge_id && session.status === 'active') {
+            const skipForm = element('form', 'override-form qr-override-form');
+            const reasonWrap = element('div');
+            const reasonId = `qr-reason-${session.id}`;
+            const reasonLabel = element('label', '', `Why is QR step ${(session.current_qr_step ?? 0) + 1} being skipped?`);
+            reasonLabel.htmlFor = reasonId;
+            const reason = element('input');
+            reason.id = reasonId;
+            reason.name = 'reason';
+            reason.required = true;
+            reason.minLength = 8;
+            reason.maxLength = 300;
+            reason.placeholder = 'Example: phone QR is not refreshing during supervised demo';
+            const submit = element('button', '', `Skip QR ${((session.current_qr_step ?? 0) + 1)} · show next`);
+            submit.type = 'submit';
+            reasonWrap.append(reasonLabel, reason);
+            skipForm.append(reasonWrap, submit);
+            skipForm.addEventListener('submit', async (event) => {
+              event.preventDefault();
+              if (!window.confirm(`Skip QR step ${(session.current_qr_step ?? 0) + 1}? The paired phone will show the next code. This is not scan evidence and makes the report inconclusive.`)) return;
+              submit.disabled = true;
+              refreshStatus.textContent = `Skipping QR step for session ${session.id}…`;
+              try {
+                const updated = await request(`/api/admin/sessions/${session.id}/skip-qr-step`, {
+                  method: 'POST',
+                  body: JSON.stringify({challenge_id: session.challenge_id, reason: reason.value.trim()}),
+                });
+                refreshStatus.textContent = `QR step skipped for ${updated.id}. The paired phone will refresh to the next code.`;
+                await refreshSessions();
+              } catch (error) {
+                refreshStatus.textContent = `QR step not skipped: ${error.message}`;
+                submit.disabled = false;
+              }
+            });
+            card.append(skipForm);
+          }
 
           if (session.video_manually_skipped) {
             card.append(element('p', 'override-note', `Manual override · ${session.video_override_reason || 'No reason supplied.'} · ${displayTime(session.video_override_at)}. Video was skipped, not passed.`));
@@ -192,14 +237,16 @@
           refreshStatus.textContent = `Updated ${new Date().toLocaleTimeString()}. Refreshes every 5 seconds.`;
         } catch (error) {
           document.getElementById('session-count').textContent = 'Unavailable';
-          sessionList.replaceChildren(element('div', 'empty', 'Local admin controls are unavailable. Open this page directly on the server computer and confirm admin controls are enabled.'));
-          refreshStatus.textContent = `Could not load local sessions: ${error.message}`;
+          sessionList.replaceChildren(element('div', 'empty', 'Admin controls are unavailable. Confirm they are enabled on the development server.'));
+          refreshStatus.textContent = `Could not load sessions: ${error.message}`;
         } finally {
           refreshInProgress = false;
         }
       }
       refreshSessions();
-      window.setInterval(refreshSessions, 5000);
+      window.setInterval(() => {
+        if (!sessionList.contains(document.activeElement)) refreshSessions();
+      }, 5000);
     })();
   </script>
 </body>

@@ -24,6 +24,18 @@ if errorlevel 1 (
 )
 
 echo.
+echo The admin panel is passwordless. If enabled, anyone with the Cloudflare URL can operate it.
+choice /C YN /N /M "Enable the public /admin panel for this supervised demo? [Y/N] "
+if errorlevel 2 (
+    set "ENABLE_ADMIN_CONTROLS="
+    echo Admin panel disabled.
+) else (
+    set "ENABLE_ADMIN_CONTROLS=true"
+    if not defined APP_ENV set "APP_ENV=development"
+    echo Admin panel enabled for this demo.
+)
+
+echo.
 "%PROJECT_PYTHON%" "%~dp0backend\run_tunnel.py"
 if errorlevel 1 pause
 

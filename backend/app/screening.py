@@ -16,8 +16,12 @@ import torch
 from PIL import Image
 
 
-VIDEO_MODEL_ID = "dima806/deepfake_vs_real_image_detection"
-VIDEO_MODEL_REVISION = "29e4cf9efc543845610045f6ba7e88e5cf9d9301"
+VIDEO_MODEL_ID = "prithivMLmods/Deep-Fake-Detector-Model"
+VIDEO_MODEL_REVISION = "c5cb24c6a159dd2b57ca15c6a1065bd0ce8fa380"
+VIDEO_AI_THRESHOLD = 0.38
+VIDEO_REAL_THRESHOLD = 0.30
+MIN_VIDEO_FACE_SIZE = 36
+VIDEO_FACE_CROP_PADDING = 0.35
 FACE_DETECTOR_URL = (
     "https://storage.googleapis.com/mediapipe-models/face_detector/"
     "blaze_face_short_range/float16/latest/blaze_face_short_range.tflite"
@@ -173,59 +177,132 @@ def analyze_video_frame(frame: np.ndarray) -> dict[str, Any]:
         height, width = frame.shape[:2]
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-        detections = _get_face_detector().detect(mp_image).detections
-        faces: list[dict[str, Any]] = []
-        for detection in detections[:4]:
+        detections = _get_face_detector().detect(mp_image).detections[:4]
+        total_frame_area = max(1, width * height)
+        eligible: list[tuple[Any, int, int, int, int]] = []
+        for detection in detections:
             box = detection.bounding_box
             left = max(0, min(width, box.origin_x))
             top = max(0, min(height, box.origin_y))
             right = max(left, min(width, box.origin_x + box.width))
             bottom = max(top, min(height, box.origin_y + box.height))
-            if right - left < 16 or bottom - top < 16:
+            box_width = right - left
+            box_height = bottom - top
+            if (
+                box_width >= MIN_VIDEO_FACE_SIZE and box_height >= MIN_VIDEO_FACE_SIZE
+            ) or (box_width * box_height) / total_frame_area >= 0.03:
+                eligible.append((detection, left, top, right, bottom))
+
+        if not eligible and detections:
+            largest = max(
+                detections,
+                key=lambda detection: (
+                    detection.bounding_box.width * detection.bounding_box.height
+                ),
+            )
+            box = largest.bounding_box
+            left = max(0, min(width, box.origin_x))
+            top = max(0, min(height, box.origin_y))
+            right = max(left, min(width, box.origin_x + box.width))
+            bottom = max(top, min(height, box.origin_y + box.height))
+            if right - left >= 32 and bottom - top >= 32:
+                eligible.append((largest, left, top, right, bottom))
+
+        eligible.sort(key=lambda face: (face[3] - face[1]) * (face[4] - face[2]), reverse=True)
+        largest_face_area = (
+            (eligible[0][3] - eligible[0][1]) * (eligible[0][4] - eligible[0][2])
+            if eligible
+            else 0
+        )
+        faces: list[dict[str, Any]] = []
+        subject_scores: list[float] = []
+        for detection, left, top, right, bottom in eligible:
+            face_width = right - left
+            face_height = bottom - top
+            pad_x = int(face_width * VIDEO_FACE_CROP_PADDING)
+            pad_y = int(face_height * VIDEO_FACE_CROP_PADDING)
+            crop_left = max(0, left - pad_x)
+            crop_top = max(0, top - pad_y)
+            crop_right = min(width, right + pad_x)
+            crop_bottom = min(height, bottom + pad_y)
+            crop_width = crop_right - crop_left
+            crop_height = crop_bottom - crop_top
+            if crop_height > crop_width:
+                extra = crop_height - crop_width
+                crop_left = max(0, crop_left - extra // 2)
+                crop_right = min(width, crop_right + extra - extra // 2)
+            elif crop_width > crop_height:
+                extra = crop_width - crop_height
+                crop_top = max(0, crop_top - extra // 2)
+                crop_bottom = min(height, crop_bottom + extra - extra // 2)
+            crop = rgb[crop_top:crop_bottom, crop_left:crop_right]
+            if crop.size == 0:
                 continue
-            crop = rgb[top:bottom, left:right]
             inputs = _processor(images=Image.fromarray(crop), return_tensors="pt")
             device = next(_classifier.parameters()).device
             inputs = {key: tensor.to(device) for key, tensor in inputs.items()}
             with torch.inference_mode():
                 probabilities = torch.softmax(_classifier(**inputs).logits, dim=-1)[0]
-            labels = _classifier.config.id2label
+            labels = _classifier.config.id2label or {}
+            normalized_labels = {
+                int(index): str(label).casefold()
+                for index, label in labels.items()
+                if str(index).isdigit()
+            }
             fake_index = next(
                 (
-                    int(index)
-                    for index, label in labels.items()
-                    if any(
-                        marker in str(label).casefold()
-                        for marker in ("fake", "synthetic", "generated", "artificial")
-                    )
+                    index
+                    for index, label in normalized_labels.items()
+                    if any(marker in label for marker in ("fake", "synthetic", "generated", "artificial", "deepfake"))
                 ),
                 None,
             )
             real_index = next(
-                (int(index) for index, label in labels.items() if "real" in str(label).casefold()),
+                (
+                    index
+                    for index, label in normalized_labels.items()
+                    if any(marker in label for marker in ("real", "authentic", "genuine", "human", "original"))
+                ),
                 None,
             )
             if fake_index is None or real_index is None:
                 raise RuntimeError(
                     f"Classifier labels do not identify real and fake classes: {labels!r}"
                 )
+            if fake_index >= len(probabilities) or real_index >= len(probabilities):
+                raise RuntimeError("Classifier labels refer to an output index that does not exist.")
+
+            fake_score = round(float(probabilities[fake_index]), 4)
+            real_score = round(float(probabilities[real_index]), 4)
+            is_subject = face_width * face_height >= 0.25 * largest_face_area
+            if is_subject:
+                subject_scores.append(fake_score)
             faces.append({
                 "bbox": {
                     "x": left / width,
                     "y": top / height,
-                    "width": (right - left) / width,
-                    "height": (bottom - top) / height,
+                    "width": face_width / width,
+                    "height": face_height / height,
                 },
                 "detection_confidence": round(float(detection.categories[0].score), 4),
-                "fake_score": round(float(probabilities[fake_index]), 4),
-                "real_score": round(float(probabilities[real_index]), 4),
+                "fake_score": fake_score,
+                "real_score": real_score,
+                "threshold": VIDEO_AI_THRESHOLD,
+                "subject_face": is_subject,
                 "model": VIDEO_MODEL_ID,
                 "model_revision": VIDEO_MODEL_REVISION,
             })
+        frame_score = max(subject_scores) if subject_scores else None
         return {
             "status": "analyzed" if faces else "no_face",
             "faces": faces,
-            "timestamp_note": "Frame classifier scores are research signals, not calibrated probabilities.",
+            "frame_score": frame_score,
+            "frame_classification": (
+                "AI-like" if frame_score is not None and frame_score >= VIDEO_AI_THRESHOLD
+                else "real-like" if frame_score is not None
+                else None
+            ),
+            "timestamp_note": "Frame classifier scores are uncalibrated research signals, not identity or authenticity determinations.",
         }
 
 
@@ -291,17 +368,30 @@ def _bounded_video_frame(frame: av.VideoFrame) -> np.ndarray:
 
 def summarize_video_frames(frames: list[dict[str, Any]]) -> dict[str, Any]:
     analyzed = [frame for frame in frames if frame.get("status") == "analyzed"]
-    scores = [
-        face["fake_score"]
-        for frame in analyzed
-        for face in frame.get("faces", [])
-    ]
+    scores: list[float] = []
+    for frame in analyzed:
+        frame_score = frame.get("frame_score")
+        if frame_score is not None:
+            scores.append(float(frame_score))
+            continue
+        face_scores = [
+            float(face["fake_score"])
+            for face in frame.get("faces", [])
+            if "fake_score" in face and face.get("subject_face", True)
+        ]
+        if face_scores:
+            scores.append(max(face_scores))
     result: dict[str, Any] = {
         "status": "unavailable" if not frames else "inconclusive",
         "frames_sampled": len(frames),
         "frames_with_faces": len(analyzed),
         "median_fake_score": None,
+        "aggregate_fake_score": None,
         "score_range": None,
+        "flagged_frames": 0,
+        "flagged_frame_ratio": 0.0,
+        "model_verdict": "INCONCLUSIVE",
+        "model_threshold": VIDEO_AI_THRESHOLD,
         "temporal_consistency": "unavailable",
         "detail": "A frame-level screening signal is not a determination that a person or video is authentic.",
         "frame_evidence": [],
@@ -317,16 +407,47 @@ def summarize_video_frames(frames: list[dict[str, Any]]) -> dict[str, Any]:
             result["detail"] = "No face crops were scored in the sampled live frames."
         return result
 
-    result["median_fake_score"] = round(float(np.median(scores)), 4)
+    median_score = float(np.median(scores))
+    result["median_fake_score"] = round(median_score, 4)
+    mean_score = float(np.mean(scores))
+    aggregate_score = 0.60 * median_score + 0.40 * mean_score
+    result["aggregate_fake_score"] = round(aggregate_score, 4)
     result["score_range"] = round(float(max(scores) - min(scores)), 4)
+    flagged_frames = sum(score >= VIDEO_AI_THRESHOLD for score in scores)
+    flagged_ratio = flagged_frames / len(scores)
+    real_ratio = sum(score < VIDEO_REAL_THRESHOLD for score in scores) / len(scores)
+    result["flagged_frames"] = flagged_frames
+    result["flagged_frame_ratio"] = round(flagged_ratio, 4)
+    if (
+        len(scores) >= 2
+        and flagged_frames >= 2
+        and flagged_ratio >= 0.40
+        and aggregate_score >= 0.40
+        and real_ratio < 0.40
+    ):
+        result["model_verdict"] = "AI_GENERATED"
+    elif (
+        len(scores) >= 2
+        and aggregate_score <= VIDEO_REAL_THRESHOLD
+        and (flagged_frames == 0 or (len(scores) >= 5 and flagged_frames <= 1 and aggregate_score <= 0.20))
+        and real_ratio >= 0.60
+    ):
+        result["model_verdict"] = "REAL_VIDEO"
+    else:
+        result["model_verdict"] = "INCONCLUSIVE"
     frame_evidence = []
     for frame in analyzed:
         for face in frame.get("faces", []):
+            if not face.get("subject_face", True):
+                continue
             frame_evidence.append({
                 "elapsed_ms": frame["elapsed_ms"],
                 "fake_score": face["fake_score"],
                 "real_score": face["real_score"],
-                "model_lean": "AI-like" if face["fake_score"] > face["real_score"] else "real-like",
+                "model_lean": (
+                    "AI-like" if face["fake_score"] >= VIDEO_AI_THRESHOLD else "real-like"
+                ),
+                "threshold": VIDEO_AI_THRESHOLD,
                 "bbox": face["bbox"],
             })
     result["frame_evidence"] = sorted(
@@ -342,4 +463,10 @@ def summarize_video_frames(frames: list[dict[str, Any]]) -> dict[str, Any]:
         result["status"] = "review" if result["temporal_consistency"] == "review" else "analyzed"
     else:
         result["detail"] = "Too few face-bearing frames were sampled to compare temporal consistency."
+    result["detail"] = (
+        f"Experimental video-screening consensus: {result['model_verdict']} "
+        f"(aggregate AI-like score {result['aggregate_fake_score']:.1%}; "
+        f"{flagged_frames}/{len(scores)} frames at or above {VIDEO_AI_THRESHOLD:.0%}). "
+        "The model scores are uncalibrated research signals, not identity or authenticity determinations."
+    )
     return result

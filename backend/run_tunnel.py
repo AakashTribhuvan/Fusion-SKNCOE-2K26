@@ -331,6 +331,14 @@ def main() -> int:
 
         print("\nPrototype ready. Open this URL on the laptop and scan its QR with your phone:")
         print(tunnel_url)
+        if (
+            os.getenv("ENABLE_ADMIN_CONTROLS", "").strip().lower() == "true"
+            and os.getenv("APP_ENV", "development").strip().lower() not in {"prod", "production"}
+        ):
+            print("Passwordless admin panel (public while this tunnel is open):")
+            print(f"{tunnel_url}/admin")
+        else:
+            print("Admin panel is disabled. Restart and opt in at the launcher prompt to enable it.")
         print("The link is public while this window is open. Press Ctrl+C to end the demo and close the tunnel.")
         os.startfile(tunnel_url)  # type: ignore[attr-defined]
         while tunnel.poll() is None and api.poll() is None:

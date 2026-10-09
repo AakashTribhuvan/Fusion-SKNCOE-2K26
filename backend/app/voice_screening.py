@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import difflib
 import io
 import threading
+from collections import Counter
 from typing import Any
 
 import av
@@ -9,11 +11,15 @@ import numpy as np
 import torch
 
 
-AUDIO_MODEL_ID = "Hemgg/Deepfake-audio-detection"
-AUDIO_MODEL_REVISION = "0d75271368ef2c7efd14831dc503c431f6aab0eb"
+AUDIO_MODEL_ID = "garystafford/wav2vec2-deepfake-voice-detector"
+AUDIO_MODEL_REVISION = "c66306024a7ede0be291e9c4558b37634782dc4e"
 TRANSCRIPTION_MODEL_ID = "Systran/faster-whisper-tiny.en"
 TRANSCRIPTION_MODEL_REVISION = "0d3d19a32d3338f10357c0889762bd8d64bbdeba"
 SAMPLE_RATE = 16_000
+AUDIO_MIN_DURATION_SECONDS = 0.3
+AUDIO_MAX_DURATION_SECONDS = 10.0
+AUDIO_SILENCE_RMS_THRESHOLD = 0.001
+PHRASE_MATCH_THRESHOLD = 0.90
 _model_lock = threading.RLock()
 _audio_processor: Any = None
 _audio_model: Any = None
@@ -34,8 +40,8 @@ def decode_audio(audio_bytes: bytes) -> np.ndarray:
                 for resampled in resampler.resample(frame):
                     samples = resampled.to_ndarray().reshape(-1)
                     sample_count += samples.size
-                    if sample_count > SAMPLE_RATE * 10:
-                        raise ValueError("Audio must be between 2 and 10 seconds long.")
+                    if sample_count > SAMPLE_RATE * AUDIO_MAX_DURATION_SECONDS:
+                        raise ValueError("Audio must be between 0.3 and 10 seconds long.")
                     chunks.append(samples)
     except (av.error.FFmpegError, OSError) as error:
         raise ValueError(f"The audio recording could not be decoded: {error}") from error
@@ -43,8 +49,8 @@ def decode_audio(audio_bytes: bytes) -> np.ndarray:
         raise ValueError("The submitted recording contains no decodable audio samples.")
     waveform = np.concatenate(chunks).astype(np.float32, copy=False)
     duration_seconds = len(waveform) / SAMPLE_RATE
-    if duration_seconds < 2.0 or duration_seconds > 10.0:
-        raise ValueError("Audio must be between 2 and 10 seconds long.")
+    if duration_seconds < AUDIO_MIN_DURATION_SECONDS or duration_seconds > AUDIO_MAX_DURATION_SECONDS:
+        raise ValueError("Audio must be between 0.3 and 10 seconds long.")
     if not np.isfinite(waveform).all():
         raise ValueError("The submitted recording contains invalid audio samples.")
     return waveform
@@ -84,12 +90,14 @@ def audio_model_status() -> dict[str, str]:
                 "model": AUDIO_MODEL_ID,
                 "revision": AUDIO_MODEL_REVISION,
                 "license": "Apache-2.0",
+                "weights_size": "approximately 1.2 GB",
             }
         if _audio_error is not None:
             return {
                 "status": "unavailable",
                 "model": AUDIO_MODEL_ID,
                 "revision": AUDIO_MODEL_REVISION,
+                "license": "Apache-2.0",
                 "detail": _audio_error,
             }
         return {
@@ -97,6 +105,7 @@ def audio_model_status() -> dict[str, str]:
             "model": AUDIO_MODEL_ID,
             "revision": AUDIO_MODEL_REVISION,
             "license": "Apache-2.0",
+            "weights_size": "approximately 1.2 GB",
         }
 
 
@@ -139,7 +148,7 @@ def warm_transcriber() -> dict[str, str]:
         }
 
 
-def transcribe_phrase(waveform: np.ndarray) -> str:
+def transcribe_phrase(waveform: np.ndarray, expected_phrase: str) -> str:
     global _whisper, _whisper_error
     if _whisper_error is not None:
         raise RuntimeError(_whisper_error)
@@ -152,9 +161,10 @@ def transcribe_phrase(waveform: np.ndarray) -> str:
             segments, _ = _whisper.transcribe(
                 waveform,
                 language="en",
-                beam_size=1,
+                beam_size=5,
                 condition_on_previous_text=False,
                 vad_filter=False,
+                hotwords=expected_phrase,
             )
             return " ".join(segment.text.strip() for segment in segments).strip()
     except Exception as error:
@@ -176,31 +186,24 @@ def classify_audio(waveform: np.ndarray) -> dict[str, Any]:
         with torch.inference_mode():
             probabilities = torch.softmax(_audio_model(**inputs).logits, dim=-1)[0]
         labels = _audio_model.config.id2label
-        ai_index = next(
-            (
-                int(index)
-                for index, label in labels.items()
-                if any(marker in str(label).casefold() for marker in ("ai", "fake", "synthetic", "spoof"))
-            ),
-            None,
-        )
-        human_index = next(
-            (
-                int(index)
-                for index, label in labels.items()
-                if any(marker in str(label).casefold() for marker in ("human", "real", "bonafide"))
-            ),
-            None,
-        )
+        label_indices = {str(label).strip().casefold(): int(index) for index, label in labels.items()}
+        ai_index = label_indices.get("fake")
+        human_index = label_indices.get("real")
         if ai_index is None or human_index is None:
-            raise RuntimeError(f"Audio model labels do not identify AI and human classes: {labels!r}")
+            raise RuntimeError(f"Audio model labels do not identify real and fake classes: {labels!r}")
+        ai_score = round(float(probabilities[ai_index]), 4)
+        human_score = round(float(probabilities[human_index]), 4)
         return {
             "status": "review",
             "model": AUDIO_MODEL_ID,
             "model_revision": AUDIO_MODEL_REVISION,
-            "ai_voice_score": round(float(probabilities[ai_index]), 4),
-            "human_voice_score": round(float(probabilities[human_index]), 4),
-            "detail": "Uncalibrated research score; it is not proof of a live human speaker.",
+            "license": "Apache-2.0",
+            "ai_voice_score": ai_score,
+            "human_voice_score": human_score,
+            "detail": (
+                f"Uncalibrated research score: {ai_score:.1%} synthetic-like and "
+                f"{human_score:.1%} human-like. This is not proof of a live human speaker."
+            ),
         }
 
 
@@ -208,23 +211,95 @@ def normalize_phrase(text: str) -> str:
     return " ".join("".join(char.lower() if char.isalnum() else " " for char in text).split())
 
 
+def compare_phrase(expected_phrase: str, transcription: str) -> dict[str, Any]:
+    expected = normalize_phrase(expected_phrase)
+    recognized = normalize_phrase(transcription)
+    if not expected or not recognized:
+        return {"status": "failed", "similarity": 0.0, "exact_match": False}
+
+    expected_tokens = expected.split()
+    recognized_tokens = recognized.split()
+    overlap = sum((Counter(expected_tokens) & Counter(recognized_tokens)).values())
+    token_similarity = overlap / max(len(expected_tokens), len(recognized_tokens))
+    text_similarity = difflib.SequenceMatcher(None, expected, recognized).ratio()
+    similarity = round(max(token_similarity, text_similarity), 4)
+    return {
+        "status": "passed" if similarity >= PHRASE_MATCH_THRESHOLD else "failed",
+        "similarity": similarity,
+        "exact_match": expected == recognized,
+    }
+
+
+def _audio_quality(waveform: np.ndarray) -> dict[str, Any]:
+    duration_seconds = len(waveform) / SAMPLE_RATE
+    rms = float(np.sqrt(np.mean(np.square(waveform))))
+    peak = float(np.max(np.abs(waveform)))
+    clipping_ratio = float(np.mean(np.abs(waveform) >= 0.99))
+    silent = rms < AUDIO_SILENCE_RMS_THRESHOLD
+    clipped = clipping_ratio > 0.01
+    short_for_model = duration_seconds < 2.5
+
+    if silent:
+        status = "failed"
+        detail = (
+            f"Recording is silent or nearly silent (RMS {rms:.6f}; "
+            f"minimum {AUDIO_SILENCE_RMS_THRESHOLD:.3f}). Check the microphone and retry."
+        )
+    elif clipped or short_for_model:
+        status = "review"
+        reasons = []
+        if clipped:
+            reasons.append("the signal is clipped or distorted")
+        if short_for_model:
+            reasons.append("the clip is shorter than the model's stated 2.5-second optimal range")
+        detail = f"Audio quality needs review because {' and '.join(reasons)}."
+    else:
+        status = "passed"
+        detail = "Audio duration and signal level are suitable for this research screening."
+
+    return {
+        "status": status,
+        "detail": detail,
+        "duration_seconds": round(duration_seconds, 2),
+        "sample_rate": SAMPLE_RATE,
+        "peak_amplitude": round(peak, 6),
+        "rms_energy": round(rms, 6),
+        "clipping_ratio": round(clipping_ratio, 4),
+        "silent": silent,
+        "clipped": clipped,
+    }
+
+
 def analyze_audio(audio_bytes: bytes, expected_phrase: str) -> dict[str, Any]:
     waveform = decode_audio(audio_bytes)
+    quality = _audio_quality(waveform)
     result: dict[str, Any] = {
         "duration_seconds": round(len(waveform) / SAMPLE_RATE, 2),
         "phrase_status": "unavailable",
         "spoof_status": "unavailable",
         "phrase_detail": None,
+        "phrase_similarity": None,
+        "quality": quality,
         "spoof": None,
     }
+    if quality["status"] == "failed":
+        result["phrase_detail"] = quality["detail"]
+        result["spoof"] = {"status": "unavailable", "detail": quality["detail"]}
+        return result
+
     try:
-        transcription = transcribe_phrase(waveform)
-        phrase_matches = normalize_phrase(transcription) == normalize_phrase(expected_phrase)
-        result["phrase_status"] = "passed" if phrase_matches else "failed"
+        transcription = transcribe_phrase(waveform, expected_phrase)
+        phrase_result = compare_phrase(expected_phrase, transcription)
+        result["phrase_status"] = phrase_result["status"]
+        result["phrase_similarity"] = phrase_result["similarity"]
         result["phrase_detail"] = (
-            "The fresh phrase was transcribed in order."
-            if phrase_matches
-            else "The transcription did not exactly match the fresh phrase."
+            (
+                "The fresh phrase was transcribed exactly."
+                if phrase_result["exact_match"]
+                else f"The fresh phrase was transcribed with {phrase_result['similarity']:.0%} similarity."
+            )
+            if phrase_result["status"] == "passed"
+            else f"The transcription matched the fresh phrase with {phrase_result['similarity']:.0%} similarity; 90% is required."
         )
     except RuntimeError as error:
         result["phrase_detail"] = str(error)
