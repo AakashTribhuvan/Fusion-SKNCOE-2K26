@@ -8,17 +8,36 @@ from __future__ import annotations
 
 import hmac
 import io
+import json
+import os
 import secrets
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 from uuid import UUID, uuid4
+from urllib.parse import urlsplit
 
 import qrcode
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
+from webauthn import (
+    base64url_to_bytes,
+    generate_authentication_options,
+    generate_registration_options,
+    verify_authentication_response,
+    verify_registration_response,
+)
+from webauthn.helpers.exceptions import WebAuthnException
+from webauthn.helpers.structs import (
+    AuthenticatorAttachment,
+    AuthenticatorSelectionCriteria,
+    PublicKeyCredentialDescriptor,
+    ResidentKeyRequirement,
+    UserVerificationRequirement,
+)
+from webauthn.helpers import options_to_json
 
 
 ROOT = Path(__file__).resolve().parent
@@ -27,13 +46,6 @@ CHALLENGE_TTL = timedelta(seconds=30)
 CHALLENGE_STEPS = 6
 CHALLENGE_STEP_SECONDS = 1.5
 MAX_OBSERVATIONS = 120
-PHRASES = (
-    "blue river seven",
-    "silver maple twenty",
-    "quiet amber lighthouse",
-    "copper meadow thirty",
-    "violet harbor sunrise",
-)
 
 
 def utc_now() -> datetime:
@@ -43,11 +55,17 @@ def utc_now() -> datetime:
 @dataclass
 class ChallengeState:
     id: UUID
-    phrase: str
     created_at: datetime
     expires_at: datetime
     codes: list[str]
     submitted: bool = False
+
+
+@dataclass
+class PhoneCredential:
+    id: bytes
+    public_key: bytes
+    sign_count: int
 
 
 @dataclass
@@ -57,6 +75,12 @@ class SessionState:
     created_at: datetime
     expires_at: datetime
     paired: bool = False
+    phone_credential_id: str | None = None
+    phone_verified: bool = False
+    pending_webauthn_challenge: bytes | None = None
+    pending_webauthn_kind: Literal["registration", "authentication"] | None = None
+    pending_webauthn_expires_at: datetime | None = None
+    pending_phone_device_id: str | None = None
     challenge: ChallengeState | None = None
     result: dict | None = None
 
@@ -65,13 +89,14 @@ class SessionView(BaseModel):
     id: UUID
     status: Literal["active", "expired"]
     paired: bool
+    phone_key_registered: bool
+    phone_verified: bool
     created_at: datetime
     expires_at: datetime
 
 
 class ChallengeView(BaseModel):
     id: UUID
-    phrase: str
     status: Literal["active", "expired", "submitted"]
     created_at: datetime
     expires_at: datetime
@@ -82,6 +107,14 @@ class ChallengeView(BaseModel):
 
 class PairRequest(BaseModel):
     token: str = Field(min_length=16, max_length=128)
+
+
+class WebAuthnCredentialSubmission(BaseModel):
+    credential: dict[str, Any]
+
+
+class PhoneDeviceRequest(BaseModel):
+    device_id: UUID
 
 
 class Observation(BaseModel):
@@ -112,11 +145,12 @@ class VerificationReport(BaseModel):
 
 
 _sessions: dict[UUID, SessionState] = {}
+_phone_credentials: dict[str, PhoneCredential] = {}
 
 app = FastAPI(
     title="Fusion Identity Verification API",
-    version="0.2.0",
-    description="Local demo: session-bound phone pairing and randomized QR motion challenge.",
+    version="0.3.0",
+    description="Demo: phone WebAuthn user verification, session-bound pairing, and a randomized QR motion challenge.",
 )
 
 
@@ -143,9 +177,50 @@ def _public_session(state: SessionState) -> SessionView:
         id=state.id,
         status=status,
         paired=state.paired,
+        phone_key_registered=state.phone_credential_id is not None,
+        phone_verified=state.phone_verified,
         created_at=state.created_at,
         expires_at=state.expires_at,
     )
+
+
+def _webauthn_context(request: Request) -> tuple[str, str]:
+    configured_origin = os.getenv("FUSION_WEBAUTHN_ORIGIN") or os.getenv("FUSION_PUBLIC_ORIGIN")
+    configured_rp_id = os.getenv("FUSION_WEBAUTHN_RP_ID")
+    origin = (configured_origin or str(request.base_url).rstrip("/")).rstrip("/")
+    rp_id = configured_rp_id or request.url.hostname or "localhost"
+    parsed_origin = urlsplit(origin)
+    if parsed_origin.scheme not in {"http", "https"} or not parsed_origin.hostname:
+        raise HTTPException(status_code=500, detail="WebAuthn origin configuration is invalid")
+    if parsed_origin.path not in {"", "/"} or parsed_origin.query or parsed_origin.fragment:
+        raise HTTPException(status_code=500, detail="WebAuthn origin must not include a path, query, or fragment")
+    if parsed_origin.hostname != rp_id and not parsed_origin.hostname.endswith(f".{rp_id}"):
+        raise HTTPException(status_code=500, detail="WebAuthn RP ID must match the configured origin host")
+    if parsed_origin.scheme != "https" and parsed_origin.hostname not in {"localhost", "127.0.0.1", "::1"}:
+        raise HTTPException(status_code=400, detail="Phone verification requires HTTPS outside localhost")
+    return rp_id, origin
+
+
+def _public_origin(request: Request) -> str:
+    return (os.getenv("FUSION_PUBLIC_ORIGIN") or str(request.base_url)).rstrip("/")
+
+
+def _set_pending_webauthn(state: SessionState, challenge: bytes, kind: Literal["registration", "authentication"]) -> None:
+    state.pending_webauthn_challenge = challenge
+    state.pending_webauthn_kind = kind
+    state.pending_webauthn_expires_at = min(utc_now() + timedelta(minutes=2), state.expires_at)
+
+
+def _take_pending_webauthn(state: SessionState, kind: Literal["registration", "authentication"]) -> bytes:
+    challenge = state.pending_webauthn_challenge
+    expires_at = state.pending_webauthn_expires_at
+    valid = challenge is not None and state.pending_webauthn_kind == kind and expires_at is not None and utc_now() < expires_at
+    state.pending_webauthn_challenge = None
+    state.pending_webauthn_kind = None
+    state.pending_webauthn_expires_at = None
+    if not valid or challenge is None:
+        raise HTTPException(status_code=410, detail="Phone verification challenge expired; request a fresh one")
+    return challenge
 
 
 def _public_challenge(challenge: ChallengeState) -> ChallengeView:
@@ -155,7 +230,6 @@ def _public_challenge(challenge: ChallengeState) -> ChallengeView:
         status = "expired" if utc_now() >= challenge.expires_at else "active"
     return ChallengeView(
         id=challenge.id,
-        phrase=challenge.phrase,
         status=status,
         created_at=challenge.created_at,
         expires_at=challenge.expires_at,
@@ -207,7 +281,7 @@ def get_session(session_id: UUID) -> SessionView:
 def pairing_qr(session_id: UUID, request: Request) -> Response:
     state = _session(session_id)
     _ensure_active(state)
-    phone_url = str(request.base_url).rstrip("/") + f"/phone/{session_id}?token={state.pair_token}"
+    phone_url = _public_origin(request) + f"/phone/{session_id}?token={state.pair_token}"
     return Response(_qr_png(phone_url), media_type="image/png", headers={"Cache-Control": "no-store"})
 
 
@@ -223,19 +297,160 @@ def pair_phone(session_id: UUID, body: PairRequest) -> SessionView:
     return _public_session(state)
 
 
+@app.post("/api/sessions/{session_id}/phone/webauthn/registration/options", tags=["phone verification"])
+def phone_registration_options(
+    session_id: UUID,
+    body: PhoneDeviceRequest,
+    request: Request,
+    x_pair_token: Annotated[str | None, Header()] = None,
+) -> dict[str, Any]:
+    state = _session(session_id)
+    _ensure_active(state)
+    _require_phone_token(state, x_pair_token)
+    device_id = str(body.device_id)
+    if device_id in _phone_credentials:
+        raise HTTPException(status_code=409, detail="A phone credential is already registered")
+    rp_id, _ = _webauthn_context(request)
+    options = generate_registration_options(
+        rp_id=rp_id,
+        rp_name="Fusion Identity Check",
+        user_id=body.device_id.bytes,
+        user_name=f"fusion-phone-{body.device_id}",
+        user_display_name="Fusion phone authenticator",
+        authenticator_selection=AuthenticatorSelectionCriteria(
+            authenticator_attachment=AuthenticatorAttachment.PLATFORM,
+            resident_key=ResidentKeyRequirement.PREFERRED,
+            user_verification=UserVerificationRequirement.REQUIRED,
+        ),
+    )
+    _set_pending_webauthn(state, options.challenge, "registration")
+    state.pending_phone_device_id = device_id
+    return json.loads(options_to_json(options))
+
+
+@app.post("/api/sessions/{session_id}/phone/webauthn/registration/verify", response_model=SessionView, tags=["phone verification"])
+def verify_phone_registration(
+    session_id: UUID,
+    body: WebAuthnCredentialSubmission,
+    request: Request,
+    x_pair_token: Annotated[str | None, Header()] = None,
+) -> SessionView:
+    state = _session(session_id)
+    _ensure_active(state)
+    _require_phone_token(state, x_pair_token)
+    if body.credential.get("authenticatorAttachment") != "platform":
+        raise HTTPException(status_code=400, detail="Use the phone's built-in platform authenticator")
+    device_id = state.pending_phone_device_id
+    if device_id is None:
+        raise HTTPException(status_code=409, detail="Request phone registration options first")
+    expected_challenge = _take_pending_webauthn(state, "registration")
+    state.pending_phone_device_id = None
+    rp_id, origin = _webauthn_context(request)
+    try:
+        verification = verify_registration_response(
+            credential=body.credential,
+            expected_challenge=expected_challenge,
+            expected_rp_id=rp_id,
+            expected_origin=origin,
+            require_user_verification=True,
+        )
+    except WebAuthnException as exc:
+        raise HTTPException(status_code=400, detail="Phone credential registration could not be verified") from exc
+
+    if any(hmac.compare_digest(existing.id, verification.credential_id) for existing in _phone_credentials.values()):
+        raise HTTPException(status_code=409, detail="This phone credential is already registered")
+    _phone_credentials[device_id] = PhoneCredential(
+        id=verification.credential_id,
+        public_key=verification.credential_public_key,
+        sign_count=verification.sign_count,
+    )
+    state.phone_credential_id = device_id
+    state.phone_verified = False
+    return _public_session(state)
+
+
+@app.post("/api/sessions/{session_id}/phone/webauthn/authentication/options", tags=["phone verification"])
+def phone_authentication_options(
+    session_id: UUID,
+    body: PhoneDeviceRequest,
+    request: Request,
+    x_pair_token: Annotated[str | None, Header()] = None,
+) -> dict[str, Any]:
+    state = _session(session_id)
+    _ensure_active(state)
+    _require_phone_token(state, x_pair_token)
+    device_id = str(body.device_id)
+    credential = _phone_credentials.get(device_id)
+    if credential is None:
+        raise HTTPException(status_code=409, detail="Register the phone's platform credential first")
+    state.phone_credential_id = device_id
+    rp_id, _ = _webauthn_context(request)
+    options = generate_authentication_options(
+        rp_id=rp_id,
+        allow_credentials=[PublicKeyCredentialDescriptor(id=credential.id)],
+        user_verification=UserVerificationRequirement.REQUIRED,
+    )
+    _set_pending_webauthn(state, options.challenge, "authentication")
+    state.phone_verified = False
+    return json.loads(options_to_json(options))
+
+
+@app.post("/api/sessions/{session_id}/phone/webauthn/authentication/verify", response_model=SessionView, tags=["phone verification"])
+def verify_phone_authentication(
+    session_id: UUID,
+    body: WebAuthnCredentialSubmission,
+    request: Request,
+    x_pair_token: Annotated[str | None, Header()] = None,
+) -> SessionView:
+    state = _session(session_id)
+    _ensure_active(state)
+    _require_phone_token(state, x_pair_token)
+    device_id = state.phone_credential_id
+    credential = _phone_credentials.get(device_id or "")
+    if credential is None:
+        raise HTTPException(status_code=409, detail="Register the phone's platform credential first")
+    supplied_id = body.credential.get("rawId")
+    supplied_text_id = body.credential.get("id")
+    if not isinstance(supplied_id, str) or not isinstance(supplied_text_id, str):
+        raise HTTPException(status_code=403, detail="Phone credential does not match this session")
+    try:
+        supplied_id_bytes = base64url_to_bytes(supplied_id)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=403, detail="Phone credential does not match this session") from exc
+    if not hmac.compare_digest(supplied_id_bytes, credential.id) or not hmac.compare_digest(supplied_text_id, supplied_id):
+        raise HTTPException(status_code=403, detail="Phone credential does not match this session")
+    expected_challenge = _take_pending_webauthn(state, "authentication")
+    rp_id, origin = _webauthn_context(request)
+    try:
+        verification = verify_authentication_response(
+            credential=body.credential,
+            expected_challenge=expected_challenge,
+            expected_rp_id=rp_id,
+            expected_origin=origin,
+            credential_public_key=credential.public_key,
+            credential_current_sign_count=credential.sign_count,
+            require_user_verification=True,
+        )
+    except WebAuthnException as exc:
+        raise HTTPException(status_code=400, detail="Phone user-verification signature could not be verified") from exc
+
+    credential.sign_count = verification.new_sign_count
+    state.phone_verified = True
+    return _public_session(state)
+
+
 @app.post("/api/sessions/{session_id}/challenge", response_model=ChallengeView, status_code=201, tags=["challenge"])
 def create_challenge(session_id: UUID) -> ChallengeView:
     state = _session(session_id)
     _ensure_active(state)
-    if not state.paired:
-        raise HTTPException(status_code=409, detail="Pair a phone before starting the challenge")
+    if not state.phone_verified:
+        raise HTTPException(status_code=409, detail="Complete phone user verification before starting the challenge")
     if state.challenge is not None and not state.challenge.submitted and utc_now() < state.challenge.expires_at:
         raise HTTPException(status_code=409, detail="A challenge is already active")
 
     now = utc_now()
     state.challenge = ChallengeState(
         id=uuid4(),
-        phrase=secrets.choice(PHRASES),
         created_at=now,
         expires_at=min(now + CHALLENGE_TTL, state.expires_at),
         codes=[secrets.token_urlsafe(9) for _ in range(CHALLENGE_STEPS)],
@@ -281,8 +496,8 @@ def submit_evidence(session_id: UUID, body: EvidenceSubmission) -> VerificationR
     state = _session(session_id)
     _ensure_active(state)
     challenge = state.challenge
-    if not state.paired:
-        raise HTTPException(status_code=409, detail="Pair a phone before submitting evidence")
+    if not state.phone_verified:
+        raise HTTPException(status_code=409, detail="Complete phone user verification before submitting evidence")
     if challenge is None or challenge.id != body.challenge_id:
         raise HTTPException(status_code=404, detail="Challenge not found for this session")
     if challenge.submitted:
@@ -291,6 +506,7 @@ def submit_evidence(session_id: UUID, body: EvidenceSubmission) -> VerificationR
         raise HTTPException(status_code=410, detail="Challenge expired; request a new one")
 
     matched_steps: list[int] = []
+    step_positions: dict[int, Observation] = {}
     for observation in body.observations:
         parts = observation.payload.split("|")
         if len(parts) != 5 or parts[0] != "FUSION26":
@@ -300,20 +516,25 @@ def submit_evidence(session_id: UUID, body: EvidenceSubmission) -> VerificationR
             step = int(raw_step)
         except ValueError:
             continue
-        if (
+        valid_code = (
             observed_session == str(session_id)
             and observed_challenge == str(challenge.id)
             and 0 <= step < len(challenge.codes)
             and hmac.compare_digest(challenge.codes[step], code)
-            and (not matched_steps or step > matched_steps[-1])
-        ):
+        )
+        if not valid_code:
+            continue
+        if not matched_steps:
             matched_steps.append(step)
+            step_positions[step] = observation
+        elif step == matched_steps[-1]:
+            continue
+        elif len(matched_steps) < CHALLENGE_STEPS and step == (matched_steps[-1] + 1) % CHALLENGE_STEPS:
+            matched_steps.append(step)
+            step_positions[step] = observation
 
     qr_passed = len(matched_steps) == CHALLENGE_STEPS and body.captured_duration_ms >= 4_000
-    positions = [observation for observation in body.observations if observation.payload in {
-        f"FUSION26|{session_id}|{challenge.id}|{step}|{challenge.codes[step]}"
-        for step in matched_steps
-    }]
+    positions = [step_positions[step] for step in matched_steps]
     moved = False
     if len(positions) >= 3:
         moved = (
@@ -325,9 +546,10 @@ def submit_evidence(session_id: UUID, body: EvidenceSubmission) -> VerificationR
 
     checks = {
         "phone_pairing": CheckResult(status="passed", detail="The session-specific pairing token was accepted."),
+        "phone_user_verification": CheckResult(status="passed", detail="The phone platform authenticator verified the user and signed a fresh server challenge."),
         "randomized_qr_sequence": CheckResult(
             status="passed" if qr_passed else "failed",
-            detail=f"Observed {len(matched_steps)} of {CHALLENGE_STEPS} fresh codes in order.",
+            detail=f"Observed {len(matched_steps)} of {CHALLENGE_STEPS} fresh codes in cyclic order.",
         ),
         "phone_motion": CheckResult(
             status="passed" if motion_passed else ("failed" if qr_passed else "review"),
@@ -337,8 +559,8 @@ def submit_evidence(session_id: UUID, body: EvidenceSubmission) -> VerificationR
         "speaker_verification": CheckResult(status="unavailable", detail="A speaker enrollment and matching model are not integrated yet."),
         "audio_spoof_detection": CheckResult(status="unavailable", detail="An audio anti-spoof model is not integrated yet."),
         "capture_quality": CheckResult(
-            status="review" if body.audio_duration_ms < 500 or body.captured_duration_ms < 4_000 else "passed",
-            detail=f"Browser reported {body.captured_duration_ms} ms video and {body.audio_duration_ms} ms audio capture.",
+            status="review" if body.captured_duration_ms < 4_000 else "passed",
+            detail=f"Browser reported {body.captured_duration_ms} ms video capture; audio analysis is outside the selected first scope.",
         ),
     }
     decision = "review" if motion_passed else "challenge_failed"
@@ -348,7 +570,8 @@ def submit_evidence(session_id: UUID, body: EvidenceSubmission) -> VerificationR
         checks=checks,
         limitations=[
             "QR observations and capture durations are reported by the browser and are not independently decoded from uploaded media.",
-            "This demo does not establish civil identity or detect deepfakes; missing model checks keep the outcome at Review.",
+            "Phone user verification proves use of the paired platform credential; it does not identify the camera subject or establish civil identity.",
+            "A validated face deepfake classifier is not integrated yet; the final outcome remains Review.",
             "Session state is in memory and resets when the API restarts.",
         ],
         generated_at=utc_now(),

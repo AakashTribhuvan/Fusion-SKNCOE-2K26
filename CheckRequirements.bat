@@ -29,7 +29,7 @@ if errorlevel 1 (
 )
 
 echo Checking required imports...
-"%PROJECT_PYTHON%" -c "import fastapi, uvicorn, pydantic_settings, multipart, supabase, mediapipe, cv2, torch, qrcode; print('FastAPI', fastapi.__version__); print('Uvicorn', uvicorn.__version__); print('Supabase', supabase.__version__); print('MediaPipe', mediapipe.__version__); print('OpenCV', cv2.__version__); print('PyTorch', torch.__version__); print('CUDA available:', torch.cuda.is_available())"
+"%PROJECT_PYTHON%" -c "import fastapi, uvicorn, pydantic_settings, multipart, supabase, mediapipe, cv2, torch, qrcode, webauthn; print('FastAPI', fastapi.__version__); print('Uvicorn', uvicorn.__version__); print('Supabase', supabase.__version__); print('MediaPipe', mediapipe.__version__); print('OpenCV', cv2.__version__); print('PyTorch', torch.__version__); print('WebAuthn', webauthn.__version__); print('CUDA available:', torch.cuda.is_available())"
 if errorlevel 1 (
     echo ERROR: One or more required imports failed.
     popd

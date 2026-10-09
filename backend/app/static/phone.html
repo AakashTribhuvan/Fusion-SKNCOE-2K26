@@ -12,8 +12,8 @@
 <body><main class="card">
   <div class="mark">F</div><h1>Phone challenge</h1>
   <p class="muted">Keep this page open and show the changing code to the laptop camera.</p>
-  <div id="waiting"><span class="pill">PAIRING PHONE</span></div>
-  <section id="challenge" class="hidden"><div class="phrase" id="phrase"></div><img id="qr" class="qr" alt="Rotating, one-time verification QR code"><p id="step" class="muted"></p><span class="pill">MOVE IN A SLOW FIGURE EIGHT</span></section>
+  <div id="waiting"><span class="pill">PAIRING PHONE</span><p class="muted">After pairing, verify locally with your phone's platform authenticator to sign this session.</p></div>
+  <section id="challenge" class="hidden"><img id="qr" class="qr" alt="Rotating, one-time verification QR code"><p id="step" class="muted"></p><span class="pill">MOVE IN A SLOW FIGURE EIGHT</span></section>
   <div id="message" role="status" aria-live="polite">Connecting to the session…</div>
 </main>
 <script>
@@ -24,23 +24,32 @@
   const headers = {'X-Pair-Token': token || ''};
   const $ = id => document.getElementById(id);
   const say = text => $('message').textContent = text;
-  const call = async (path, options={}) => {const r=await fetch(path,{...options,headers:{...headers,...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})}});const d=r.headers.get('content-type')?.includes('application/json')?await r.json():null;if(!r.ok)throw new Error(d?.detail||`Request failed (${r.status})`);return d;};
+  const call = async (path, options={}) => {const r=await fetch(path,{...options,headers:{...headers,...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})}});const d=r.headers.get('content-type')?.includes('application/json')?await r.json():null;if(!r.ok){const error=new Error(d?.detail||`Request failed (${r.status})`);error.status=r.status;throw error;}return d;};
+  const toBuffer = value => {const base64=value.replace(/-/g,'+').replace(/_/g,'/');const binary=atob(base64+'='.repeat((4-base64.length%4)%4));return Uint8Array.from(binary,c=>c.charCodeAt(0)).buffer;};
+  const toBase64Url = value => {const bytes=new Uint8Array(value);let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');};
+  const deviceId = () => {let id=localStorage.getItem('fusion:phone-device-id');if(!id){id=crypto.randomUUID();localStorage.setItem('fusion:phone-device-id',id);}return id;};
+  const serializeCredential = (credential, registering) => {const r=credential.response;const response={clientDataJSON:toBase64Url(r.clientDataJSON)};if(registering){response.attestationObject=toBase64Url(r.attestationObject);response.transports=r.getTransports?.()||[];}else{response.authenticatorData=toBase64Url(r.authenticatorData);response.signature=toBase64Url(r.signature);response.userHandle=r.userHandle?toBase64Url(r.userHandle):null;}return{id:credential.id,rawId:toBase64Url(credential.rawId),type:credential.type,authenticatorAttachment:credential.authenticatorAttachment,response,clientExtensionResults:credential.getClientExtensionResults()};};
+  const registerPhone = async id => {say('Create a phone platform credential and complete local user verification…');const options=await call(`/api/sessions/${sessionId}/phone/webauthn/registration/options`,{method:'POST',body:JSON.stringify({device_id:id})});options.challenge=toBuffer(options.challenge);options.user.id=toBuffer(options.user.id);options.excludeCredentials=(options.excludeCredentials||[]).map(item=>({...item,id:toBuffer(item.id)}));const credential=await navigator.credentials.create({publicKey:options});if(!credential)throw new Error('Phone credential creation was cancelled.');await call(`/api/sessions/${sessionId}/phone/webauthn/registration/verify`,{method:'POST',body:JSON.stringify({credential:serializeCredential(credential,true)})});};
+  const authenticatePhone = async id => {say('Verify locally with your phone to sign a fresh server challenge…');const options=await call(`/api/sessions/${sessionId}/phone/webauthn/authentication/options`,{method:'POST',body:JSON.stringify({device_id:id})});options.challenge=toBuffer(options.challenge);options.allowCredentials=(options.allowCredentials||[]).map(item=>({...item,id:toBuffer(item.id)}));const assertion=await navigator.credentials.get({publicKey:options});if(!assertion)throw new Error('Phone verification was cancelled.');await call(`/api/sessions/${sessionId}/phone/webauthn/authentication/verify`,{method:'POST',body:JSON.stringify({credential:serializeCredential(assertion,false)})});};
   let activeChallenge = null;
   let ticker = null;
   async function connect() {
     try {
       if (!token) throw new Error('Pairing token is missing. Scan the QR from the laptop again.');
       if (params.has('token')) { await call(`/api/sessions/${sessionId}/pair`,{method:'POST',body:JSON.stringify({token})}); sessionStorage.setItem(`fusion:${sessionId}`,token); history.replaceState({},'',location.pathname); }
-      say('Phone paired. Waiting for the laptop to start the challenge…');
+      if (!isSecureContext || !navigator.credentials || !navigator.credentials.create || !navigator.credentials.get) throw new Error('Phone platform authentication needs a secure HTTPS page. Use localhost for laptop-only testing or deploy the demo behind HTTPS for your phone.');
+      const session=await call(`/api/sessions/${sessionId}`);
+      if(!session.phone_verified){let id=localStorage.getItem('fusion:phone-device-id');if(id){try{await authenticatePhone(id);}catch(error){if(error.status!==409)throw error;localStorage.removeItem('fusion:phone-device-id');id=null;}}if(!id){id=deviceId();await registerPhone(id);await authenticatePhone(id);}}
+      say('Phone user verification succeeded. Biometric data stayed on this device. Waiting for the laptop to start the challenge…');
       setInterval(async () => {
-        if (activeChallenge) return;
-        try { const challenge=await call(`/api/sessions/${sessionId}/challenge`); if(challenge.status==='active'){activeChallenge=challenge;startSequence(challenge);} }
+        try { const challenge=await call(`/api/sessions/${sessionId}/challenge`); if(challenge.status==='active'&&challenge.id!==activeChallenge?.id){activeChallenge=challenge;startSequence(challenge);} }
         catch(error){ if(!error.message.includes('has not started')) say(error.message); }
       },1000);
     } catch(error) { say(error.message); }
   }
   function startSequence(challenge) {
-    $('waiting').classList.add('hidden'); $('challenge').classList.remove('hidden'); $('phrase').textContent=`Say: “${challenge.phrase}”`; say('Challenge active.');
+    if(ticker)clearInterval(ticker);
+    $('waiting').classList.add('hidden'); $('challenge').classList.remove('hidden'); say('Challenge active.');
     let step=0;
     let priorImageUrl=null;
     const show=async()=>{

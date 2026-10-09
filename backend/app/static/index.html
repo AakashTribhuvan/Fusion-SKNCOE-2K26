@@ -31,8 +31,8 @@
           <div><strong>Pair your phone</strong><p class="muted">Scan this one-time QR using the phone you want to use for the challenge. Open the project through a reachable HTTPS address when pairing a separate device.</p></div>
         </div>
         <div id="paired-area" class="hidden">
-          <p><span class="pill">PHONE PAIRED</span> <span class="muted">Ready for a randomized challenge.</span></p>
-          <button id="challenge" class="btn">Generate challenge</button>
+          <p><span class="pill">PHONE PAIRED</span> <span id="phone-proof-status" class="muted">Complete local user verification on the phone to continue.</span></p>
+          <button id="challenge" class="btn" disabled>Generate challenge</button>
         </div>
       </div>
       <div id="message" class="status" role="status" aria-live="polite"></div>
@@ -42,14 +42,13 @@
       <h2>What this prototype checks</h2>
       <div class="step"><span class="num">1</span><p><strong>Phone pairing</strong><br><span class="muted">A random session token links the second device.</span></p></div>
       <div class="step"><span class="num">2</span><p><strong>Fresh QR sequence</strong><br><span class="muted">The phone displays six changing, session-bound codes.</span></p></div>
-      <div class="step"><span class="num">3</span><p><strong>Live capture challenge</strong><br><span class="muted">The laptop camera scans the moving phone while you read a random phrase.</span></p></div>
+      <div class="step"><span class="num">3</span><p><strong>Live capture challenge</strong><br><span class="muted">The laptop camera scans the moving phone as you trace a slow figure eight.</span></p></div>
       <div class="step"><span class="num">4</span><p><strong>Transparent report</strong><br><span class="muted">Unavailable AI checks stay unavailable; the prototype will not invent a pass score.</span></p></div>
     </section>
 
     <section id="capture-card" class="card hidden">
       <h2>Complete the live challenge</h2>
-      <p class="muted">Allow camera and microphone access. Keep the phone QR visible to the laptop camera and move it through a slow figure eight.</p>
-      <div id="phrase" class="phrase"></div>
+      <p class="muted">Allow camera access. Keep the phone QR visible to the laptop camera and move it through a slow figure eight.</p>
       <video id="preview" autoplay muted playsinline></video>
       <div class="row"><button id="capture" class="btn">Start 10-second capture</button><span id="capture-status" class="muted"></span></div>
     </section>
@@ -61,7 +60,7 @@
       <p id="limitations" class="foot"></p>
     </section>
   </div>
-  <p class="foot">Privacy for this demo: camera and microphone streams stay in the browser. Only scanned QR observations and capture durations are sent to the local API. Session data is in memory and is cleared when the API restarts.</p>
+  <p class="foot">Privacy for this demo: video stays in the browser and is not yet analyzed by a classifier. Only scanned QR observations and capture duration are sent to the API. Phone biometrics stay on-device; the API receives and verifies a signed public-key assertion. Session data is in memory and clears when the API restarts.</p>
 </main>
 <script>
 (() => {
@@ -77,12 +76,14 @@
     if (!response.ok) throw new Error(data?.detail || `Request failed (${response.status})`);
     return data;
   };
-  const showPairState = (isPaired) => {
+  const showPairState = (isPaired, isVerified = false) => {
     paired = isPaired;
     $('pair-area').classList.toggle('hidden', paired);
     $('paired-area').classList.toggle('hidden', !paired);
-    $('session-status').textContent = paired ? 'PHONE CONNECTED' : 'SESSION ACTIVE';
-    if (paired && poller) { clearInterval(poller); poller = null; message('Phone paired. Generate a fresh challenge when ready.'); }
+    $('session-status').textContent = isVerified ? 'PHONE VERIFIED' : paired ? 'PHONE PAIRED' : 'SESSION ACTIVE';
+    $('phone-proof-status').textContent = isVerified ? 'Local user verification succeeded. Ready for the challenge.' : 'Complete local user verification on the phone to continue.';
+    $('challenge').disabled = !isVerified;
+    if (isVerified && poller) { clearInterval(poller); poller = null; message('Phone user verification succeeded. Generate the QR challenge when ready.'); }
   };
   $('start').addEventListener('click', async () => {
     $('start').disabled = true;
@@ -97,7 +98,7 @@
         try {
           const current = await request(`/api/sessions/${session.id}`);
           if (current.status === 'expired') { clearInterval(poller); message('Session expired. Start a new one.'); return; }
-          if (current.paired) showPairState(true);
+          if (current.paired) showPairState(true, current.phone_verified);
         } catch (error) { message(error.message); }
       }, 1200);
       message('Scan the pairing QR with your phone.');
@@ -107,8 +108,9 @@
     $('challenge').disabled = true;
     try {
       challenge = await request(`/api/sessions/${session.id}/challenge`, { method: 'POST' });
+      $('capture').disabled = false;
+      $('capture').textContent = 'Start 10-second capture';
       $('capture-card').classList.remove('hidden');
-      $('phrase').textContent = `Say: “${challenge.phrase}”`;
       message('Challenge issued. Your phone will display the changing QR sequence.');
       $('capture-card').scrollIntoView({behavior:'smooth', block:'center'});
     } catch (error) { message(error.message); $('challenge').disabled = false; }
@@ -117,19 +119,14 @@
     const button = $('capture');
     button.disabled = true;
     let stream;
-    let recorder;
     const observations = [];
     const started = performance.now();
     try {
       if (!('BarcodeDetector' in window)) throw new Error('QR scanning needs a Chromium-based browser with BarcodeDetector (for example, current Chrome or Edge).');
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: {ideal: 1280}, height: {ideal: 720} }, audio: true });
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: {ideal: 1280}, height: {ideal: 720} }, audio: false });
       $('preview').srcObject = stream;
       await $('preview').play();
       const detector = new BarcodeDetector({formats:['qr_code']});
-      recorder = new MediaRecorder(stream);
-      // Consume and discard each chunk. Raw audio/video never leaves this page.
-      recorder.ondataavailable = () => {};
-      recorder.start(250);
       $('capture-status').textContent = 'Scanning phone codes… keep moving';
       const stopAt = started + 10_000;
       while (performance.now() < stopAt) {
@@ -143,15 +140,13 @@
         await new Promise(resolve => setTimeout(resolve, 120));
       }
       const capturedDuration = Math.round(performance.now()-started);
-      recorder.stop();
       stream.getTracks().forEach(track => track.stop());
       $('preview').srcObject = null;
       $('capture-status').textContent = 'Checking the randomized sequence…';
-      const report = await request(`/api/sessions/${session.id}/evidence`, {method:'POST', body: JSON.stringify({challenge_id: challenge.id, observations, captured_duration_ms:capturedDuration, audio_duration_ms: capturedDuration})});
+      const report = await request(`/api/sessions/${session.id}/evidence`, {method:'POST', body: JSON.stringify({challenge_id: challenge.id, observations, captured_duration_ms:capturedDuration, audio_duration_ms: 0})});
       renderReport(report);
       $('capture-status').textContent = `Scanned ${observations.length} QR observations.`;
     } catch (error) {
-      if (recorder && recorder.state !== 'inactive') recorder.stop();
       if (stream) stream.getTracks().forEach(track => track.stop());
       $('preview').srcObject = null;
       $('capture-status').textContent = '';
@@ -160,9 +155,11 @@
     }
   });
   function renderReport(report) {
-    const labels = {phone_pairing:'Phone pairing',randomized_qr_sequence:'Randomized QR sequence',phone_motion:'Phone movement',face_deepfake_analysis:'Face/deepfake analysis',speaker_verification:'Speaker verification',audio_spoof_detection:'Audio spoof detection',capture_quality:'Capture quality'};
+    const labels = {phone_pairing:'Phone pairing',phone_user_verification:'Phone user verification',randomized_qr_sequence:'Randomized QR sequence',phone_motion:'Phone movement',face_deepfake_analysis:'Face/deepfake classifier',speaker_verification:'Speaker verification',audio_spoof_detection:'Audio spoof detection',capture_quality:'Capture quality'};
     $('report').innerHTML = Object.entries(report.checks).map(([key, value]) => `<div class="check"><span>${labels[key] || key}</span><small>${value.status.toUpperCase()} · ${value.detail}</small></div>`).join('');
     $('limitations').textContent = report.limitations.join(' ');
+    $('challenge').disabled = false;
+    $('challenge').textContent = 'Start a fresh challenge';
     $('report-card').classList.remove('hidden');
     $('report-card').scrollIntoView({behavior:'smooth',block:'center'});
   }
