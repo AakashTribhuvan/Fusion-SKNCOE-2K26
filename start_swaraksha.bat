@@ -2,11 +2,13 @@
 setlocal
 
 set "ROOT=%~dp0"
-set "PYTHON=C:\Users\Sora\AppData\Local\Programs\Python\Python311\python.exe"
+set "PYTHON=%ROOT%.venv\Scripts\python.exe"
 
 if not exist "%PYTHON%" (
-    echo Python 3.11 was not found at:
+    echo Project Python environment was not found at:
     echo %PYTHON%
+    echo Create it with: py -3.11 -m venv .venv
+    echo Then install requirements.txt and rerun this launcher.
     pause
     exit /b 1
 )
@@ -22,10 +24,10 @@ if errorlevel 1 (
     )
 )
 
-start "SWARAKSHA Backend" /D "%ROOT%" cmd /k ""%PYTHON%" -m uvicorn api.main:app --reload --host 127.0.0.1 --port 8000"
+start "SWARAKSHA Video Backend" /D "%ROOT%" cmd /k ""%PYTHON%" -m uvicorn api.video_app:app --reload --host 127.0.0.1 --port 8000"
 start "SWARAKSHA Frontend" /D "%ROOT%frontend" cmd /k npm.cmd run dev -- --host 127.0.0.1
 
-echo SWARAKSHA v2 started.
+echo SWARAKSHA video screening started.
 echo Backend:  http://localhost:8000
 echo Frontend: http://localhost:5173
 endlocal

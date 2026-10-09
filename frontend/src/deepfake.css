@@ -135,6 +135,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--orange); outlin
 .score-value small { margin-left: 2px; font: 400 17px var(--serif); }
 .score-caption { margin-top: 8px; color: var(--quiet); font-size: 7px; line-height: 1.5; letter-spacing: 0; }
 .outcome-panel.flagged .score-value { color: var(--orange); }
+.outcome-panel.review .outcome-label { color: var(--orange); }
 
 .report-body { padding-bottom: 5px; }
 .metric-strip { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); border-bottom: 1px solid var(--rule); }

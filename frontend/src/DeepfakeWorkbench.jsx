@@ -50,6 +50,14 @@ function getOutcome(item) {
     detail: `${flagged} of ${analyzed} analyzed frames were flagged by the image classifier. Treat this as screening evidence, not a definitive finding.`,
   };
 
+  const metadata = result.metadata_forensics;
+  if (analysis?.status === 'NO_STRONG_AI_EVIDENCE' && ['high', 'medium'].includes(String(metadata?.confidence).toLowerCase())) return {
+    tone: 'review',
+    label: 'METADATA REVIEW',
+    title: 'Container markers warrant a closer look',
+    detail: `${(metadata.flags || []).length} file-metadata finding(s) were reported. The image classifier did not flag the sampled face crops; metadata markers alone do not establish that a video is synthetic.`,
+  };
+
   if (analysis?.status === 'NO_STRONG_AI_EVIDENCE') return {
     tone: 'clear',
     label: 'NO STRONG SIGNAL',
@@ -307,14 +315,29 @@ function OutcomePanel({ outcome, result }) {
 
 function AnalysisReport({ result, onSeek }) {
   const analysis = result.ai_analysis || {};
+  const depth = result.depth_analysis || {};
+  const temporal = result.temporal_analysis || {};
   const frames = Array.isArray(result.frames) ? result.frames : [];
   const analyzed = Number(analysis.frames_analyzed) || 0;
   const flagged = Number(analysis.frames_flagged) || 0;
+  const depthRegions = Number(depth.face_regions_analyzed) || 0;
+  const persistentTracks = Number(temporal.persistent_tracks) || 0;
+  const detectedTracks = Number(temporal.tracks_detected) || 0;
   const layers = [
-    { name: 'Sampled-frame classifier', state: analyzed ? `${analyzed} FRAMES SCORED` : 'NOT RUN', detail: 'Image model on eligible face crops' },
+    { name: 'Sampled-frame classifier', state: analyzed ? `${analyzed} FRAMES SCORED` : 'NOT RUN', detail: 'Image model on detected face crops; no identity enrollment' },
     { name: 'File metadata', state: result.metadata_forensics?.confidence ? result.metadata_forensics.confidence.toUpperCase() : 'UNAVAILABLE', detail: 'Container metadata markers only' },
-    { name: 'Depth / occlusion consistency', state: 'NOT MEASURED', detail: 'No depth-mask output in this API' },
-    { name: 'Object persistence / temporal cues', state: 'NOT MEASURED', detail: 'No object tracking output in this API' },
+    {
+      name: 'Face-region relative depth',
+      state: depthRegions ? `${depthRegions} MASKS MEASURED` : 'UNAVAILABLE',
+      detail: depthRegions
+        ? `${depth.frames_analyzed || 0} sampled frames · median face/background delta ${depth.median_face_background_depth_delta ?? '—'} · relative depth, not metric 3D`
+        : depth.reason || 'No face-region depth measurements were produced.',
+    },
+    {
+      name: 'Face-track continuity',
+      state: temporal.available ? `${persistentTracks} / ${detectedTracks} PERSISTED` : 'UNAVAILABLE',
+      detail: temporal.detail || 'Face-box association across sampled frames; not general object permanence.',
+    },
   ];
 
   return (
@@ -366,11 +389,17 @@ function AnalysisReport({ result, onSeek }) {
                   : skippedByBackend
                     ? 'Classifier skipped this sample'
                     : frameAnalysis.error || frameAnalysis.reason || 'No classifier output';
+                const faceDetails = (frame.faces || []).map((face) => {
+                  const track = face.track_id ? `TRACK ${face.track_id}` : '';
+                  const depthDelta = face.depth_analysis?.face_background_depth_delta;
+                  return [track, Number.isFinite(Number(depthDelta)) ? `REL DEPTH Δ ${Number(depthDelta).toFixed(3)}` : ''].filter(Boolean).join(' · ');
+                }).filter(Boolean);
+                const frameDetail = [scoreDetail, ...faceDetails].join(' · ');
                 return (
                   <button className="ledger-row" type="button" key={`${frame.frame_number}-ledger-${index}`} onClick={() => onSeek(frame.timestamp)}>
                     <span className="ledger-time">{formatTime(frame.timestamp)}</span>
                     <span className={`ledger-result ${!performed ? 'muted' : isFlagged ? 'flagged' : 'scored'}`}>{!performed ? 'NOT SCORED' : isFlagged ? 'FLAGGED BY MODEL' : 'NOT FLAGGED'}</span>
-                    <span className="ledger-score">{scoreDetail}</span>
+                    <span className="ledger-score">{frameDetail}</span>
                     <span className="ledger-arrow">↗</span>
                   </button>
                 );
@@ -381,7 +410,7 @@ function AnalysisReport({ result, onSeek }) {
       </section>
 
       {result.metadata_forensics && <MetadataEvidence metadata={result.metadata_forensics} />}
-      <p className="model-caveat">Swaraksha samples video at intervals and applies an image classifier to eligible crops. Short-lived artifacts between samples may be missed. A model score is not a calibrated probability.</p>
+      <p className="model-caveat">Swaraksha samples video at intervals and applies an image classifier to detected face crops. Relative depth and face-box continuity are review measurements, not liveness verdicts. Short-lived artifacts between samples may be missed; classifier scores are not calibrated probabilities.</p>
     </div>
   );
 }
