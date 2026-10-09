@@ -1,0 +1,34 @@
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Datasets, recordings, model weights, and generated artifacts
+data/
+datasets/
+recordings/
+models/weights/
+*.pt
+*.pth
+*.onnx
+*.mp4
+*.wav
+*.jpg
+*.jpeg
+*.png
+
+# Frontend dependencies/build output
+node_modules/
+dist/
+build/

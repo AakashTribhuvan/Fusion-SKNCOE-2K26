@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a0f1c">
+  <title>Fusion · Identity Check</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0a0f1c;--panel:#111a2c;--line:#263651;--muted:#99a8c2;--text:#edf3ff;--mint:#8de3c1;--blue:#8db7ff;--warn:#f4c977;--red:#ff9292}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 75% -15%,#18365a 0,transparent 45%),var(--bg);color:var(--text);font:16px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+    main{max-width:1080px;margin:auto;padding:48px 22px 80px}.top{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13px;letter-spacing:.14em;text-transform:uppercase}.mark{display:grid;place-items:center;width:36px;height:36px;border:1px solid #45658e;border-radius:12px;color:var(--mint);font-weight:800;letter-spacing:0}
+    h1{max-width:760px;margin:30px 0 12px;font-size:clamp(36px,6vw,64px);line-height:1.03;letter-spacing:-.045em}h1 span{color:var(--mint)}.lede{max-width:700px;color:#b8c6dc;font-size:18px}.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;margin-top:34px}.card{padding:24px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(145deg,#131e32,#0f1727);box-shadow:0 24px 70px #03071270}.card h2{margin:0 0 6px;font-size:20px}.muted{color:var(--muted)}.step{display:flex;gap:13px;align-items:flex-start;padding:15px 0;border-top:1px solid #23314a}.num{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#1c2d46;color:var(--mint);font-size:13px;font-weight:700}.step p{margin:0}.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:46px;border:0;border-radius:12px;padding:0 18px;background:var(--mint);color:#092117;font:700 15px inherit;cursor:pointer}.btn.secondary{border:1px solid #385274;background:#16243a;color:var(--text)}.btn:disabled{opacity:.45;cursor:not-allowed}.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:18px}.status{min-height:28px;margin-top:12px;color:var(--muted)}.pill{display:inline-flex;padding:4px 10px;border-radius:999px;background:#1a2c42;color:var(--mint);font-size:12px}.pair{display:flex;align-items:center;gap:18px;margin-top:18px}.qr{width:150px;height:150px;padding:8px;border-radius:12px;background:#fff;object-fit:contain}.hidden{display:none!important}video{display:block;width:100%;max-height:360px;margin-top:16px;background:#05080e;border:1px solid var(--line);border-radius:14px;object-fit:cover;transform:scaleX(-1)}.phrase{margin:12px 0;padding:14px 16px;border:1px solid #355a67;border-radius:12px;background:#10242b;color:var(--mint);font-size:21px;font-weight:700;letter-spacing:.04em}.report{display:grid;gap:9px;margin-top:14px}.check{display:flex;justify-content:space-between;gap:16px;padding:12px 14px;border-radius:11px;background:#0b1321;border:1px solid #223149}.check small{color:var(--muted);text-align:right}.notice{padding:12px 14px;border-left:3px solid var(--warn);background:#231d12;color:#e8d8b8;border-radius:0 10px 10px 0;font-size:14px}.foot{margin-top:20px;color:#8391a9;font-size:13px}.link{color:var(--blue);word-break:break-all}pre{white-space:pre-wrap;word-break:break-word;color:#c4d2e8}button:focus-visible,a:focus-visible{outline:3px solid #9bdfff;outline-offset:3px}
+    @media(max-width:760px){main{padding:30px 16px 54px}.grid{grid-template-columns:1fr}.pair{align-items:flex-start;flex-direction:column}.qr{width:132px;height:132px}}
+  </style>
+</head>
+<body>
+<main>
+  <div class="top"><div class="mark">F</div> Fusion · Secure onboarding demo</div>
+  <h1>Identity checks need <span>more than a face.</span></h1>
+  <p class="lede">Pair a phone, complete a fresh visual challenge, and see exactly which signals the prototype can verify today. This demonstration does not make an automated identity decision.</p>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Verification session</h2>
+      <p class="muted">A short-lived session connects this browser to one phone. The pairing token expires with the session.</p>
+      <div id="start-area" class="row"><button id="start" class="btn">Start secure session <span>↗</span></button></div>
+      <div id="session-area" class="hidden">
+        <div class="row"><span class="pill" id="session-status">SESSION ACTIVE</span><span class="muted" id="expires"></span></div>
+        <div id="pair-area" class="pair">
+          <img id="pair-qr" class="qr" alt="One-time phone pairing QR code">
+          <div><strong>Pair your phone</strong><p class="muted">Scan this one-time QR using the phone you want to use for the challenge. Open the project through a reachable HTTPS address when pairing a separate device.</p></div>
+        </div>
+        <div id="paired-area" class="hidden">
+          <p><span class="pill">PHONE PAIRED</span> <span class="muted">Ready for a randomized challenge.</span></p>
+          <button id="challenge" class="btn">Generate challenge</button>
+        </div>
+      </div>
+      <div id="message" class="status" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="card">
+      <h2>What this prototype checks</h2>
+      <div class="step"><span class="num">1</span><p><strong>Phone pairing</strong><br><span class="muted">A random session token links the second device.</span></p></div>
+      <div class="step"><span class="num">2</span><p><strong>Fresh QR sequence</strong><br><span class="muted">The phone displays six changing, session-bound codes.</span></p></div>
+      <div class="step"><span class="num">3</span><p><strong>Live capture challenge</strong><br><span class="muted">The laptop camera scans the moving phone while you read a random phrase.</span></p></div>
+      <div class="step"><span class="num">4</span><p><strong>Transparent report</strong><br><span class="muted">Unavailable AI checks stay unavailable; the prototype will not invent a pass score.</span></p></div>
+    </section>
+
+    <section id="capture-card" class="card hidden">
+      <h2>Complete the live challenge</h2>
+      <p class="muted">Allow camera and microphone access. Keep the phone QR visible to the laptop camera and move it through a slow figure eight.</p>
+      <div id="phrase" class="phrase"></div>
+      <video id="preview" autoplay muted playsinline></video>
+      <div class="row"><button id="capture" class="btn">Start 10-second capture</button><span id="capture-status" class="muted"></span></div>
+    </section>
+
+    <section id="report-card" class="card hidden">
+      <h2>Verification evidence</h2>
+      <div class="notice">This demo reports challenge evidence only. It has no validated face deepfake, speaker verification, or audio anti-spoof model, so the final decision remains Review.</div>
+      <div id="report" class="report"></div>
+      <p id="limitations" class="foot"></p>
+    </section>
+  </div>
+  <p class="foot">Privacy for this demo: camera and microphone streams stay in the browser. Only scanned QR observations and capture durations are sent to the local API. Session data is in memory and is cleared when the API restarts.</p>
+</main>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  let session = null;
+  let challenge = null;
+  let poller = null;
+  let paired = false;
+  const message = (text) => { $('message').textContent = text; };
+  const request = async (path, options = {}) => {
+    const response = await fetch(path, { ...options, headers: { ...(options.body ? {'Content-Type':'application/json'} : {}), ...(options.headers || {}) } });
+    const data = response.headers.get('content-type')?.includes('application/json') ? await response.json() : null;
+    if (!response.ok) throw new Error(data?.detail || `Request failed (${response.status})`);
+    return data;
+  };
+  const showPairState = (isPaired) => {
+    paired = isPaired;
+    $('pair-area').classList.toggle('hidden', paired);
+    $('paired-area').classList.toggle('hidden', !paired);
+    $('session-status').textContent = paired ? 'PHONE CONNECTED' : 'SESSION ACTIVE';
+    if (paired && poller) { clearInterval(poller); poller = null; message('Phone paired. Generate a fresh challenge when ready.'); }
+  };
+  $('start').addEventListener('click', async () => {
+    $('start').disabled = true;
+    message('Creating a short-lived session…');
+    try {
+      session = await request('/api/sessions', { method: 'POST' });
+      $('start-area').classList.add('hidden');
+      $('session-area').classList.remove('hidden');
+      $('expires').textContent = `Expires ${new Date(session.expires_at).toLocaleTimeString()}`;
+      $('pair-qr').src = `/api/sessions/${session.id}/pairing-qr`;
+      poller = setInterval(async () => {
+        try {
+          const current = await request(`/api/sessions/${session.id}`);
+          if (current.status === 'expired') { clearInterval(poller); message('Session expired. Start a new one.'); return; }
+          if (current.paired) showPairState(true);
+        } catch (error) { message(error.message); }
+      }, 1200);
+      message('Scan the pairing QR with your phone.');
+    } catch (error) { message(error.message); $('start').disabled = false; }
+  });
+  $('challenge').addEventListener('click', async () => {
+    $('challenge').disabled = true;
+    try {
+      challenge = await request(`/api/sessions/${session.id}/challenge`, { method: 'POST' });
+      $('capture-card').classList.remove('hidden');
+      $('phrase').textContent = `Say: “${challenge.phrase}”`;
+      message('Challenge issued. Your phone will display the changing QR sequence.');
+      $('capture-card').scrollIntoView({behavior:'smooth', block:'center'});
+    } catch (error) { message(error.message); $('challenge').disabled = false; }
+  });
+  $('capture').addEventListener('click', async () => {
+    const button = $('capture');
+    button.disabled = true;
+    let stream;
+    let recorder;
+    const observations = [];
+    const started = performance.now();
+    try {
+      if (!('BarcodeDetector' in window)) throw new Error('QR scanning needs a Chromium-based browser with BarcodeDetector (for example, current Chrome or Edge).');
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: {ideal: 1280}, height: {ideal: 720} }, audio: true });
+      $('preview').srcObject = stream;
+      await $('preview').play();
+      const detector = new BarcodeDetector({formats:['qr_code']});
+      recorder = new MediaRecorder(stream);
+      // Consume and discard each chunk. Raw audio/video never leaves this page.
+      recorder.ondataavailable = () => {};
+      recorder.start(250);
+      $('capture-status').textContent = 'Scanning phone codes… keep moving';
+      const stopAt = started + 10_000;
+      while (performance.now() < stopAt) {
+        try {
+          const codes = await detector.detect($('preview'));
+          const box = codes[0]?.boundingBox;
+          if (codes.length && box && $('preview').videoWidth && $('preview').videoHeight) {
+            observations.push({payload: codes[0].rawValue, elapsed_ms: Math.round(performance.now()-started), x: Math.max(0,Math.min(1,(box.x+box.width/2)/$('preview').videoWidth)), y: Math.max(0,Math.min(1,(box.y+box.height/2)/$('preview').videoHeight))});
+          }
+        } catch (_) { /* A missed frame is expected while the phone moves. */ }
+        await new Promise(resolve => setTimeout(resolve, 120));
+      }
+      const capturedDuration = Math.round(performance.now()-started);
+      recorder.stop();
+      stream.getTracks().forEach(track => track.stop());
+      $('preview').srcObject = null;
+      $('capture-status').textContent = 'Checking the randomized sequence…';
+      const report = await request(`/api/sessions/${session.id}/evidence`, {method:'POST', body: JSON.stringify({challenge_id: challenge.id, observations, captured_duration_ms:capturedDuration, audio_duration_ms: capturedDuration})});
+      renderReport(report);
+      $('capture-status').textContent = `Scanned ${observations.length} QR observations.`;
+    } catch (error) {
+      if (recorder && recorder.state !== 'inactive') recorder.stop();
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      $('preview').srcObject = null;
+      $('capture-status').textContent = '';
+      message(error.message);
+      button.disabled = false;
+    }
+  });
+  function renderReport(report) {
+    const labels = {phone_pairing:'Phone pairing',randomized_qr_sequence:'Randomized QR sequence',phone_motion:'Phone movement',face_deepfake_analysis:'Face/deepfake analysis',speaker_verification:'Speaker verification',audio_spoof_detection:'Audio spoof detection',capture_quality:'Capture quality'};
+    $('report').innerHTML = Object.entries(report.checks).map(([key, value]) => `<div class="check"><span>${labels[key] || key}</span><small>${value.status.toUpperCase()} · ${value.detail}</small></div>`).join('');
+    $('limitations').textContent = report.limitations.join(' ');
+    $('report-card').classList.remove('hidden');
+    $('report-card').scrollIntoView({behavior:'smooth',block:'center'});
+  }
+})();
+</script>
+</body>
+</html>

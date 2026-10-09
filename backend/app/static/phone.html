@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0a0f1c">
+  <title>Fusion · Phone Challenge</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:radial-gradient(ellipse at 50% 0,#18365a 0,transparent 48%),#0a0f1c;color:#edf3ff;font:16px/1.5 Inter,system-ui,sans-serif}.card{width:min(100%,440px);padding:24px;border:1px solid #263651;border-radius:22px;background:#111a2c;text-align:center}.mark{margin:auto;display:grid;place-items:center;width:42px;height:42px;border:1px solid #45658e;border-radius:14px;color:#8de3c1;font-weight:800}.muted{color:#99a8c2}.pill{display:inline-block;padding:4px 10px;border-radius:999px;background:#1a2c42;color:#8de3c1;font-size:12px}.qr{width:min(76vw,300px);height:min(76vw,300px);margin:18px auto;padding:10px;border-radius:16px;background:#fff;object-fit:contain}.phrase{padding:13px;border:1px solid #355a67;border-radius:12px;color:#8de3c1;font-size:21px;font-weight:700}.hidden{display:none!important}#message{min-height:44px;margin-top:12px;color:#99a8c2}.btn{border:0;border-radius:11px;padding:12px 16px;background:#8de3c1;color:#092117;font-weight:700}
+  </style>
+</head>
+<body><main class="card">
+  <div class="mark">F</div><h1>Phone challenge</h1>
+  <p class="muted">Keep this page open and show the changing code to the laptop camera.</p>
+  <div id="waiting"><span class="pill">PAIRING PHONE</span></div>
+  <section id="challenge" class="hidden"><div class="phrase" id="phrase"></div><img id="qr" class="qr" alt="Rotating, one-time verification QR code"><p id="step" class="muted"></p><span class="pill">MOVE IN A SLOW FIGURE EIGHT</span></section>
+  <div id="message" role="status" aria-live="polite">Connecting to the session…</div>
+</main>
+<script>
+(() => {
+  const sessionId = location.pathname.split('/').filter(Boolean).pop();
+  const params = new URLSearchParams(location.search);
+  const token = params.get('token') || sessionStorage.getItem(`fusion:${sessionId}`);
+  const headers = {'X-Pair-Token': token || ''};
+  const $ = id => document.getElementById(id);
+  const say = text => $('message').textContent = text;
+  const call = async (path, options={}) => {const r=await fetch(path,{...options,headers:{...headers,...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})}});const d=r.headers.get('content-type')?.includes('application/json')?await r.json():null;if(!r.ok)throw new Error(d?.detail||`Request failed (${r.status})`);return d;};
+  let activeChallenge = null;
+  let ticker = null;
+  async function connect() {
+    try {
+      if (!token) throw new Error('Pairing token is missing. Scan the QR from the laptop again.');
+      if (params.has('token')) { await call(`/api/sessions/${sessionId}/pair`,{method:'POST',body:JSON.stringify({token})}); sessionStorage.setItem(`fusion:${sessionId}`,token); history.replaceState({},'',location.pathname); }
+      say('Phone paired. Waiting for the laptop to start the challenge…');
+      setInterval(async () => {
+        if (activeChallenge) return;
+        try { const challenge=await call(`/api/sessions/${sessionId}/challenge`); if(challenge.status==='active'){activeChallenge=challenge;startSequence(challenge);} }
+        catch(error){ if(!error.message.includes('has not started')) say(error.message); }
+      },1000);
+    } catch(error) { say(error.message); }
+  }
+  function startSequence(challenge) {
+    $('waiting').classList.add('hidden'); $('challenge').classList.remove('hidden'); $('phrase').textContent=`Say: “${challenge.phrase}”`; say('Challenge active.');
+    let step=0;
+    let priorImageUrl=null;
+    const show=async()=>{
+      const current=step;
+      $('step').textContent=`Signal ${current+1} of ${challenge.step_count} · live sequence`;
+      step=(step+1)%challenge.step_count;
+      try {
+        const response=await fetch(`/api/sessions/${sessionId}/challenge/${challenge.id}/qr/${current}`,{headers});
+        if(!response.ok)throw new Error('Challenge expired. Restart from the laptop.');
+        const imageUrl=URL.createObjectURL(await response.blob());
+        if(priorImageUrl)URL.revokeObjectURL(priorImageUrl);
+        priorImageUrl=imageUrl;$('qr').src=imageUrl;$('qr').classList.remove('hidden');
+      } catch(error) { say(error.message);clearInterval(ticker); }
+    };
+    show();ticker=setInterval(show,1500);
+  }
+  connect();
+})();
+</script>
+</body>
+</html>
