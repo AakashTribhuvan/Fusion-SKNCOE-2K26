@@ -71,8 +71,8 @@ def _challenge_verdict(report: dict[str, Any]) -> tuple[str, str, colors.Color, 
     if decision == "challenge_failed":
         return (
             "FAIL - REQUIRED CHALLENGE NOT COMPLETED",
-            "The required randomized QR sequence and/or target path was not completed. This is a challenge failure, "
-            "not an identity or fraud determination.",
+            "The required randomized QR sequence/target path and/or fresh-phrase voice check was not completed. "
+            "This is a challenge failure, not an identity or fraud determination.",
             colors.HexColor("#a62e2e"),
             colors.HexColor("#fbeeee"),
         )
@@ -128,7 +128,10 @@ def _analysis_rows(checks: dict[str, Any]) -> list[Any]:
     rows.append(Paragraph("Video screening signals", heading))
     if median is None:
         rows.append(Paragraph(
-            "No face-classifier score summary is available. The video screening may have been unavailable, skipped, or lacked enough face-bearing samples.",
+            _text(face.get(
+                "detail",
+                "No face-classifier score summary is available. The video screening may have been unavailable, skipped, or lacked enough face-bearing samples.",
+            )),
             body,
         ))
     else:

@@ -30,6 +30,17 @@ from backend.app.report_pdf import _challenge_verdict
 from backend.app.voice_screening import decode_audio, normalize_phrase
 
 
+def _passing_audio_result() -> dict:
+    return {
+        "phrase_status": "passed",
+        "phrase_detail": "The fresh phrase was recognized.",
+        "phrase_similarity": 1.0,
+        "spoof_status": "review",
+        "spoof": {"detail": "Research signal only."},
+        "quality": {"status": "passed", "detail": "Audio quality passed."},
+    }
+
+
 class ScreeningLogicTests(unittest.TestCase):
     def test_report_pdf_verdict_is_challenge_only_and_has_three_outcomes(self) -> None:
         passed, pass_detail, _, _ = _challenge_verdict({"decision": "review"})
@@ -42,6 +53,7 @@ class ScreeningLogicTests(unittest.TestCase):
         self.assertIn("not an identity or fraud determination", fail_detail)
         self.assertIn("INCONCLUSIVE", inconclusive)
         self.assertIn("not a pass", inconclusive_detail)
+        self.assertIn("fresh-phrase voice check", fail_detail)
 
     def test_report_pdf_download_requires_a_completed_report(self) -> None:
         now = utc_now()
@@ -124,6 +136,7 @@ class ScreeningLogicTests(unittest.TestCase):
         self.assertTrue(response.content.startswith(b"%PDF-"))
         self.assertTrue(response.content.rstrip().endswith(b"%%EOF"))
         self.assertIn(b"PASS - REQUIRED CHALLENGE COMPLETED", response.content)
+        self.assertIn(b"Experimental video-screening consensus", response.content)
 
     def test_phone_page_uses_shared_brand_and_focused_qr_layout(self) -> None:
         now = utc_now()
@@ -166,7 +179,9 @@ class ScreeningLogicTests(unittest.TestCase):
             expires_at=now + timedelta(minutes=1),
             phone_verified=True,
             challenge=challenge,
+            audio_result=_passing_audio_result(),
         )
+        challenge.audio_submitted = True
         image = np.zeros((100, 100, 3), dtype=np.uint8)
         success, encoded = main_module.cv2.imencode(".jpg", image)
         self.assertTrue(success)
@@ -338,22 +353,19 @@ class ScreeningLogicTests(unittest.TestCase):
         )[0]
         self.assertIn('id="video-progress"', html)
         self.assertIn('id="voice-progress"', html)
-        self.assertIn('aria-label="Demo video screening progress"', html)
+        self.assertIn('aria-label="Video AI screening progress"', html)
         self.assertIn('aria-label="Voice screening progress"', html)
-        self.assertIn("/video/demo/start", capture_flow)
-        self.assertIn("/video/demo/complete", capture_flow)
-        self.assertIn("simulation.duration_seconds * 1000", capture_flow)
-        self.assertIn("Video screening progress · ${percent}%", capture_flow)
+        self.assertIn("/challenge/${challenge.id}/video`", capture_flow)
+        self.assertIn("uploadVideoForScreening", capture_flow)
+        self.assertIn("Running face-frame deepfake screening", html)
         self.assertNotIn("Simulating AI screening", capture_flow)
         self.assertNotIn("/api/models/warmup", capture_flow)
-        self.assertNotIn("/challenge/${challenge.id}/video`", capture_flow)
-        self.assertNotIn("uploadVideoWithProgress", html)
         self.assertIn('class="work-progress-fill"', html)
         self.assertIn("Analyzing consented audio", html)
         self.assertIn("Generating the evidence report", html)
         self.assertIn('id="recorded-video-preview"', html)
         self.assertIn("URL.createObjectURL(recordedVideoBlob)", html)
-        self.assertIn("recorded video stays in this tab", html)
+        self.assertIn("temporary copy remains in this tab", html)
         self.assertIn('className = \'voice-phrase-word\'', html)
 
     def test_voice_model_warmup_does_not_load_video_classifier(self) -> None:
@@ -368,36 +380,7 @@ class ScreeningLogicTests(unittest.TestCase):
         self.assertEqual(audio_status["status"], "ready")
         self.assertIn("status", video_status)
 
-    def test_video_demo_simulation_requires_consent_and_first_qr(self) -> None:
-        now = utc_now()
-        challenge = ChallengeState(
-            id=uuid4(),
-            created_at=now,
-            expires_at=now + timedelta(minutes=1),
-            codes=[],
-            audio_phrase="amber copper garden",
-        )
-        state = SessionState(
-            id=uuid4(),
-            pair_token="long-enough-pair-token-value",
-            created_at=now,
-            expires_at=now + timedelta(minutes=1),
-            phone_verified=True,
-            challenge=challenge,
-        )
-        client = TestClient(main_module.app)
-        path = f"/api/sessions/{state.id}/challenge/{challenge.id}/video/demo/start"
-
-        with patch.dict(main_module._sessions, {state.id: state}):
-            no_consent = client.post(path)
-            no_qr = client.post(path, headers={"X-Video-Consent": "true"})
-
-        self.assertEqual(no_consent.status_code, 403)
-        self.assertEqual(no_qr.status_code, 409)
-        self.assertIn("first live QR signal", no_qr.json()["detail"])
-        self.assertFalse(challenge.video_processing)
-
-    def test_video_demo_simulation_enforces_delay_and_report_marks_video_unavailable(self) -> None:
+    def test_recorded_video_is_screened_and_report_contains_actual_model_evidence(self) -> None:
         now = utc_now()
         challenge = ChallengeState(
             id=uuid4(),
@@ -414,51 +397,146 @@ class ScreeningLogicTests(unittest.TestCase):
             expires_at=now + timedelta(minutes=1),
             phone_verified=True,
             challenge=challenge,
+            audio_result=_passing_audio_result(),
             server_observations=[
                 Observation(payload=f"F26|{index}|qr-{index}", elapsed_ms=index * 1_000, x=0.5, y=0.5)
                 for index in range(6)
             ],
         )
+        challenge.audio_submitted = True
         client = TestClient(main_module.app)
-        start_path = f"/api/sessions/{state.id}/challenge/{challenge.id}/video/demo/start"
-        complete_path = f"/api/sessions/{state.id}/challenge/{challenge.id}/video/demo/complete"
-        headers = {"X-Video-Consent": "true"}
+        frame_analysis = {
+            "status": "analyzed",
+            "faces": [{
+                "bbox": {"x": 0.25, "y": 0.2, "width": 0.5, "height": 0.5},
+                "fake_score": 0.72,
+                "real_score": 0.28,
+                "subject_face": True,
+            }],
+        }
 
-        with patch.dict(main_module._sessions, {state.id: state}):
-            started = client.post(start_path, headers=headers)
-            too_soon = client.post(complete_path, headers=headers)
-            challenge.video_simulation_started_at = utc_now() - timedelta(seconds=16)
-            completed = client.post(complete_path, headers=headers)
+        with (
+            patch.dict(main_module._sessions, {state.id: state}),
+            patch.object(main_module, "decode_video_frames", return_value=[
+                (index * 1_000, np.zeros((64, 64, 3), dtype=np.uint8))
+                for index in range(3)
+            ]),
+            patch.object(main_module, "analyze_video_frame", return_value=frame_analysis) as analyze_frame,
+        ):
+            completed = client.post(
+                f"/api/sessions/{state.id}/challenge/{challenge.id}/video",
+                content=b"captured video bytes",
+                headers={"X-Video-Consent": "true", "Content-Type": "video/webm"},
+            )
             report = client.post(
                 f"/api/sessions/{state.id}/evidence",
                 json={"challenge_id": str(challenge.id)},
             )
 
-        self.assertEqual(started.status_code, 200)
-        self.assertEqual(started.json()["status"], "processing")
-        self.assertEqual(started.json()["duration_seconds"], 15)
-        self.assertEqual(too_soon.status_code, 409)
-        self.assertIn("Wait at least 15 seconds", too_soon.json()["detail"])
         self.assertEqual(completed.status_code, 200)
-        self.assertEqual(completed.json()["status"], "complete")
-        self.assertTrue(challenge.video_simulated)
+        self.assertEqual(completed.json()["frames_sampled"], 3)
+        self.assertEqual(completed.json()["frames_with_faces"], 3)
+        self.assertEqual(analyze_frame.call_count, 3)
         self.assertTrue(challenge.video_submitted)
         self.assertFalse(challenge.video_processing)
         self.assertEqual(report.status_code, 200)
         result = report.json()
-        self.assertEqual(result["decision"], "inconclusive")
-        self.assertEqual(result["checks"]["face_deepfake_analysis"]["status"], "unavailable")
-        self.assertEqual(result["checks"]["video_temporal_consistency"]["status"], "unavailable")
-        self.assertEqual(result["checks"]["video_screening_simulation"]["status"], "unavailable")
-        self.assertEqual(result["checks"]["capture_quality"]["status"], "unavailable")
-        self.assertIn("No classifier ran", result["checks"]["video_screening_simulation"]["detail"])
+        self.assertEqual(result["decision"], "review")
+        self.assertEqual(result["checks"]["face_deepfake_analysis"]["status"], "review")
+        self.assertEqual(result["checks"]["face_deepfake_analysis"]["evidence"]["model"], screening_module.VIDEO_MODEL_ID)
+        self.assertEqual(result["checks"]["video_temporal_consistency"]["status"], "review")
+        self.assertEqual(result["checks"]["capture_quality"]["status"], "passed")
+        self.assertEqual(result["checks"]["required_voice_check"]["status"], "passed")
 
     def test_admin_page_exposes_documented_per_step_qr_override(self) -> None:
         html = (main_module.ROOT / "static" / "admin.html").read_text(encoding="utf-8")
         self.assertIn("/api/admin/sessions/${session.id}/skip-qr-step", html)
+        self.assertIn("/api/admin/sessions/${session.id}/fail-qr-test", html)
+        self.assertIn("Fail QR test · demo", html)
         self.assertIn("The paired phone will show the next code", html)
         self.assertIn("makes the report inconclusive", html)
         self.assertIn("session.current_qr_step ?? 0", html)
+
+    def test_missing_required_voice_check_fails_report(self) -> None:
+        now = utc_now()
+        challenge = ChallengeState(
+            id=uuid4(),
+            created_at=now,
+            expires_at=now + timedelta(minutes=1),
+            codes=[f"qr-{index}" for index in range(6)],
+            audio_phrase="amber copper garden",
+            video_submitted=True,
+            square_zone_progress=6,
+        )
+        state = SessionState(
+            id=uuid4(),
+            pair_token="long-enough-pair-token-value",
+            created_at=now,
+            expires_at=now + timedelta(minutes=1),
+            phone_verified=True,
+            challenge=challenge,
+            server_observations=[
+                Observation(payload=f"F26|{index}|qr-{index}", elapsed_ms=index * 1_000, x=0.5, y=0.5)
+                for index in range(6)
+            ],
+        )
+        with patch.dict(main_module._sessions, {state.id: state}):
+            response = TestClient(main_module.app).post(
+                f"/api/sessions/{state.id}/evidence",
+                json={"challenge_id": str(challenge.id)},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["decision"], "challenge_failed")
+        self.assertEqual(response.json()["checks"]["required_voice_check"]["status"], "failed")
+
+    def test_admin_can_mark_qr_test_failed_and_report_records_it(self) -> None:
+        now = utc_now()
+        challenge = ChallengeState(
+            id=uuid4(),
+            created_at=now,
+            expires_at=now + timedelta(minutes=1),
+            codes=[f"qr-{index}" for index in range(6)],
+            audio_phrase="amber copper garden",
+            video_submitted=True,
+            square_zone_progress=6,
+        )
+        state = SessionState(
+            id=uuid4(),
+            pair_token="long-enough-pair-token-value",
+            created_at=now,
+            expires_at=now + timedelta(minutes=1),
+            phone_verified=True,
+            challenge=challenge,
+            audio_result=_passing_audio_result(),
+            server_observations=[
+                Observation(payload=f"F26|{index}|qr-{index}", elapsed_ms=index * 1_000, x=0.5, y=0.5)
+                for index in range(6)
+            ],
+        )
+        challenge.audio_submitted = True
+        client = TestClient(main_module.app)
+
+        with (
+            patch.dict(os.environ, {"APP_ENV": "development", "ENABLE_ADMIN_CONTROLS": "true"}),
+            patch.dict(main_module._sessions, {state.id: state}),
+        ):
+            failed = client.post(
+                f"/api/admin/sessions/{state.id}/fail-qr-test",
+                json={"challenge_id": str(challenge.id), "reason": "Demonstrate failed QR outcome"},
+            )
+            report = client.post(
+                f"/api/sessions/{state.id}/evidence",
+                json={"challenge_id": str(challenge.id)},
+            )
+
+        self.assertEqual(failed.status_code, 200)
+        self.assertTrue(failed.json()["qr_test_failed"])
+        self.assertEqual(report.status_code, 200)
+        result = report.json()
+        self.assertEqual(result["decision"], "challenge_failed")
+        self.assertEqual(result["checks"]["randomized_qr_sequence"]["status"], "failed")
+        self.assertIn("Demonstrate failed QR outcome", result["checks"]["qr_test_failure"]["detail"])
 
     def test_live_face_detection_downscales_and_returns_normalized_boxes(self) -> None:
         frame = np.zeros((720, 1280, 3), dtype=np.uint8)
@@ -686,7 +764,9 @@ class ScreeningLogicTests(unittest.TestCase):
             paired=True,
             phone_verified=True,
             challenge=challenge,
+            audio_result=_passing_audio_result(),
         )
+        challenge.audio_submitted = True
         client = TestClient(main_module.app, client=("127.0.0.1", 50000))
 
         with (
@@ -714,7 +794,7 @@ class ScreeningLogicTests(unittest.TestCase):
         self.assertEqual(result["decision"], "inconclusive")
         self.assertEqual(result["checks"]["face_deepfake_analysis"]["status"], "unavailable")
         self.assertEqual(result["checks"]["capture_quality"]["status"], "unavailable")
-        self.assertEqual(result["checks"]["audio_capture_quality"]["status"], "unavailable")
+        self.assertEqual(result["checks"]["audio_capture_quality"]["status"], "passed")
         self.assertIn("Screening timed out during demo", result["checks"]["video_screening_override"]["detail"])
         self.assertTrue(any("manually skipped" in item for item in result["limitations"]))
 
@@ -735,7 +815,9 @@ class ScreeningLogicTests(unittest.TestCase):
             paired=True,
             phone_verified=True,
             challenge=challenge,
+            audio_result=_passing_audio_result(),
         )
+        challenge.audio_submitted = True
         client = TestClient(main_module.app, client=("127.0.0.1", 50000))
         with (
             patch.dict(
@@ -778,7 +860,9 @@ class ScreeningLogicTests(unittest.TestCase):
             paired=True,
             phone_verified=True,
             challenge=challenge,
+            audio_result=_passing_audio_result(),
         )
+        challenge.audio_submitted = True
         client = TestClient(main_module.app, client=("127.0.0.1", 50000))
 
         with (

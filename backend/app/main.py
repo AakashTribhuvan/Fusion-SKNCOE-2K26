@@ -80,7 +80,6 @@ MAX_OBSERVATIONS = 200
 MAX_QR_FRAME_BYTES = 1_000_000
 MAX_VIDEO_BYTES = 25_000_000
 MAX_AUDIO_BYTES = 5_000_000
-VIDEO_SIMULATION_SECONDS = 15
 QR_PATH_SAMPLE_INTERVAL_MS = 200
 logger = logging.getLogger(__name__)
 
@@ -100,10 +99,10 @@ class ChallengeState:
     audio_submitted: bool = False
     video_submitted: bool = False
     video_processing: bool = False
-    video_simulation_started_at: datetime | None = None
-    video_simulated: bool = False
     video_override_reason: str | None = None
     video_override_at: datetime | None = None
+    qr_test_failure_reason: str | None = None
+    qr_test_failure_at: datetime | None = None
     square_zone_progress: int = 0
     current_qr_step: int = 0
     qr_step_overrides: list[dict[str, Any]] = field(default_factory=list)
@@ -224,6 +223,11 @@ class AdminQrStepOverrideRequest(BaseModel):
     reason: str = Field(min_length=8, max_length=300)
 
 
+class AdminQrTestFailureRequest(BaseModel):
+    challenge_id: UUID
+    reason: str = Field(min_length=8, max_length=300)
+
+
 class CheckResult(BaseModel):
     status: Literal["passed", "failed", "review", "unavailable"]
     detail: str
@@ -242,12 +246,6 @@ class VideoSubmissionResult(BaseModel):
     frames_with_faces: int
     median_fake_score: float | None
     score_range: float | None
-    detail: str
-
-
-class VideoSimulationResult(BaseModel):
-    status: Literal["processing", "complete"]
-    duration_seconds: int
     detail: str
 
 
@@ -526,6 +524,16 @@ def _admin_session_view(state: SessionState) -> dict[str, Any]:
         "qr_step_count": len(challenge.codes) if challenge else 0,
         "qr_steps_skipped": len(challenge.qr_step_overrides) if challenge else 0,
         "qr_step_overrides": challenge.qr_step_overrides if challenge else [],
+        "qr_test_failed": bool(challenge and challenge.qr_test_failure_reason),
+        "qr_test_failure_reason": challenge.qr_test_failure_reason if challenge else None,
+        "qr_test_failure_at": challenge.qr_test_failure_at.isoformat() if challenge and challenge.qr_test_failure_at else None,
+        "can_force_qr_failure": bool(
+            challenge
+            and state.phone_verified
+            and not challenge.submitted
+            and challenge.qr_test_failure_reason is None
+            and utc_now() < challenge.expires_at
+        ),
         "can_skip_qr_step": bool(
             challenge
             and state.phone_verified
@@ -667,6 +675,35 @@ def admin_skip_qr_step(
         "at": override_at.isoformat(),
     })
     challenge.current_qr_step = (skipped_step + 1) % len(challenge.codes)
+    return _admin_session_view(state)
+
+
+@app.post("/api/admin/sessions/{session_id}/fail-qr-test", include_in_schema=False)
+def admin_fail_qr_test(
+    session_id: UUID,
+    body: AdminQrTestFailureRequest,
+) -> dict[str, Any]:
+    _require_admin_access()
+    state = _session(session_id)
+    _ensure_active(state)
+    challenge = state.challenge
+    if challenge is None or challenge.id != body.challenge_id:
+        raise HTTPException(status_code=404, detail="Challenge not found for this session")
+    if not state.phone_verified:
+        raise HTTPException(status_code=409, detail="Phone verification is required before failing the QR test")
+    if challenge.submitted:
+        raise HTTPException(status_code=409, detail="The challenge report has already been submitted")
+    if utc_now() >= challenge.expires_at:
+        raise HTTPException(status_code=410, detail="Challenge expired; the QR test can no longer be failed")
+    if challenge.qr_test_failure_reason is not None:
+        raise HTTPException(status_code=409, detail="The QR test has already been marked failed")
+
+    reason = body.reason.strip()
+    if len(reason) < 8:
+        raise HTTPException(status_code=422, detail="Enter a reason of at least 8 characters")
+
+    challenge.qr_test_failure_reason = reason
+    challenge.qr_test_failure_at = utc_now()
     return _admin_session_view(state)
 
 
@@ -1027,7 +1064,7 @@ async def submit_audio(
         }
 
     challenge.audio_submitted = (
-        result["quality"]["status"] != "failed"
+        result["quality"]["status"] == "passed"
         and result["phrase_status"] == "passed"
     )
     state.audio_result = result
@@ -1060,86 +1097,6 @@ async def submit_audio(
 
 
 @app.post(
-    "/api/sessions/{session_id}/challenge/{challenge_id}/video/demo/start",
-    response_model=VideoSimulationResult,
-    tags=["challenge"],
-)
-def start_video_simulation(
-    session_id: UUID,
-    challenge_id: UUID,
-    x_video_consent: Annotated[str | None, Header()] = None,
-) -> VideoSimulationResult:
-    state = _session(session_id)
-    _ensure_active(state)
-    challenge = state.challenge
-    if challenge is None or challenge.id != challenge_id or utc_now() >= challenge.expires_at:
-        raise HTTPException(status_code=410, detail="Challenge expired or unavailable")
-    if challenge.submitted:
-        raise HTTPException(status_code=409, detail="Challenge evidence has already been submitted")
-    if not state.phone_verified:
-        raise HTTPException(status_code=409, detail="Complete phone user verification before video screening")
-    if x_video_consent != "true":
-        raise HTTPException(status_code=403, detail="Explicit camera consent is required for video screening")
-    if not state.server_observations:
-        raise HTTPException(status_code=409, detail="Scan the first live QR signal before video screening")
-    if challenge.video_submitted or challenge.video_processing:
-        raise HTTPException(status_code=409, detail="Video screening has already started or completed")
-
-    challenge.video_processing = True
-    challenge.video_simulation_started_at = utc_now()
-    return VideoSimulationResult(
-        status="processing",
-        duration_seconds=VIDEO_SIMULATION_SECONDS,
-        detail="Demo simulation started. No video classifier is running.",
-    )
-
-
-@app.post(
-    "/api/sessions/{session_id}/challenge/{challenge_id}/video/demo/complete",
-    response_model=VideoSimulationResult,
-    tags=["challenge"],
-)
-def complete_video_simulation(
-    session_id: UUID,
-    challenge_id: UUID,
-    x_video_consent: Annotated[str | None, Header()] = None,
-) -> VideoSimulationResult:
-    state = _session(session_id)
-    _ensure_active(state)
-    challenge = state.challenge
-    if challenge is None or challenge.id != challenge_id or utc_now() >= challenge.expires_at:
-        raise HTTPException(status_code=410, detail="Challenge expired or unavailable")
-    if challenge.submitted:
-        raise HTTPException(status_code=409, detail="Challenge evidence has already been submitted")
-    if not state.phone_verified:
-        raise HTTPException(status_code=409, detail="Complete phone user verification before video screening")
-    if x_video_consent != "true":
-        raise HTTPException(status_code=403, detail="Explicit camera consent is required for video screening")
-    if challenge.video_submitted:
-        raise HTTPException(status_code=409, detail="Video screening has already completed")
-    if challenge.video_override_reason is not None:
-        raise HTTPException(status_code=409, detail="Video screening was skipped by an administrator")
-    if not challenge.video_processing or challenge.video_simulation_started_at is None:
-        raise HTTPException(status_code=409, detail="The demo video-screening simulation has not started")
-    elapsed = (utc_now() - challenge.video_simulation_started_at).total_seconds()
-    if elapsed < VIDEO_SIMULATION_SECONDS:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Wait at least {VIDEO_SIMULATION_SECONDS} seconds for the demo simulation to complete",
-        )
-
-    challenge.video_submitted = True
-    challenge.video_processing = False
-    challenge.video_simulated = True
-    state.video_frames = []
-    return VideoSimulationResult(
-        status="complete",
-        duration_seconds=VIDEO_SIMULATION_SECONDS,
-        detail="Demo simulation complete. No video classifier ran and no video authenticity result was produced.",
-    )
-
-
-@app.post(
     "/api/sessions/{session_id}/challenge/{challenge_id}/video",
     response_model=VideoSubmissionResult,
     tags=["challenge"],
@@ -1165,27 +1122,32 @@ async def submit_video(
         raise HTTPException(status_code=409, detail="Scan the first live QR signal before submitting video")
     if challenge.video_submitted:
         raise HTTPException(status_code=409, detail="Video evidence has already been submitted for this challenge")
+    if challenge.video_processing:
+        raise HTTPException(status_code=409, detail="Video screening is already processing for this challenge")
     accepted_types = {"video/webm", "video/mp4", "video/quicktime"}
     content_type = request.headers.get("content-type", "").split(";", maxsplit=1)[0].strip().lower()
     if content_type not in accepted_types:
         raise HTTPException(status_code=415, detail="Video must be submitted as WebM, MP4, or QuickTime")
 
     challenge.video_processing = True
-    chunks: list[bytes] = []
-    size = 0
-    async for chunk in request.stream():
-        size += len(chunk)
-        if size > MAX_VIDEO_BYTES:
-            raise HTTPException(status_code=413, detail="Video recording exceeds the 25 MB limit")
-        chunks.append(chunk)
-    video_bytes = b"".join(chunks)
-    if not video_bytes:
-        raise HTTPException(status_code=400, detail="Video recording is empty")
-
     try:
+        chunks: list[bytes] = []
+        size = 0
+        async for chunk in request.stream():
+            size += len(chunk)
+            if size > MAX_VIDEO_BYTES:
+                raise HTTPException(status_code=413, detail="Video recording exceeds the 25 MB limit")
+            chunks.append(chunk)
+        video_bytes = b"".join(chunks)
+        if not video_bytes:
+            raise HTTPException(status_code=400, detail="Video recording is empty")
         sampled_frames = await run_in_threadpool(decode_video_frames, video_bytes)
     except ValueError as error:
+        challenge.video_processing = False
         raise HTTPException(status_code=400, detail=str(error)) from error
+    except Exception:
+        challenge.video_processing = False
+        raise
 
     video_frames: list[dict[str, Any]] = []
     for elapsed_ms, image in sampled_frames:
@@ -1370,13 +1332,6 @@ def submit_evidence(session_id: UUID, body: EvidenceSubmission) -> VerificationR
         )
         face_check = CheckResult(status="unavailable", detail=override_detail)
         temporal_check = CheckResult(status="unavailable", detail=override_detail)
-    elif challenge.video_simulated:
-        simulation_detail = (
-            f"A {VIDEO_SIMULATION_SECONDS}-second demo progress simulation was shown. No video classifier ran, "
-            "no video was uploaded for AI screening, and no video authenticity result is available."
-        )
-        face_check = CheckResult(status="unavailable", detail=simulation_detail)
-        temporal_check = CheckResult(status="unavailable", detail=simulation_detail)
     elif video_summary["frames_with_faces"] >= 3:
         frame_refs = ", ".join(
             "{}ms={}".format(item["elapsed_ms"], item["fake_score"])
@@ -1480,11 +1435,14 @@ def submit_evidence(session_id: UUID, body: EvidenceSubmission) -> VerificationR
         ),
         "randomized_qr_sequence": CheckResult(
             status=(
-                "unavailable" if challenge.qr_step_overrides
+                "failed" if challenge.qr_test_failure_reason
+                else "unavailable" if challenge.qr_step_overrides
                 else "passed" if qr_passed else "failed"
             ),
             detail=(
-                (
+                f"An operator marked the QR test failed for this demo. Reason: {challenge.qr_test_failure_reason}"
+                if challenge.qr_test_failure_reason
+                else (
                     f"Operator manually skipped {len(challenge.qr_step_overrides)} QR step(s); those steps were not verified. "
                     f"Reason(s): {'; '.join(item['reason'] for item in challenge.qr_step_overrides)}."
                 )
@@ -1509,19 +1467,6 @@ def submit_evidence(session_id: UUID, body: EvidenceSubmission) -> VerificationR
         "video_temporal_consistency": temporal_check,
         **(
             {
-                "video_screening_simulation": CheckResult(
-                    status="unavailable",
-                    detail=(
-                        f"The interface displayed a {VIDEO_SIMULATION_SECONDS}-second demo simulation only. "
-                        "No classifier ran; video authenticity was not assessed."
-                    ),
-                )
-            }
-            if challenge.video_simulated
-            else {}
-        ),
-        **(
-            {
                 "qr_step_override": CheckResult(
                     status="unavailable",
                     detail="One or more QR steps were manually skipped and not verified: "
@@ -1532,6 +1477,20 @@ def submit_evidence(session_id: UUID, body: EvidenceSubmission) -> VerificationR
                 )
             }
             if challenge.qr_step_overrides
+            else {}
+        ),
+        **(
+            {
+                "qr_test_failure": CheckResult(
+                    status="failed",
+                    detail=(
+                        "The QR test was marked failed by an administrator for this demo. "
+                        f"Reason: {challenge.qr_test_failure_reason} "
+                        f"Recorded at {challenge.qr_test_failure_at.isoformat() if challenge.qr_test_failure_at else 'unknown time'}."
+                    ),
+                )
+            }
+            if challenge.qr_test_failure_reason is not None
             else {}
         ),
         **(
@@ -1553,11 +1512,19 @@ def submit_evidence(session_id: UUID, body: EvidenceSubmission) -> VerificationR
             detail="Not performed by design; speaker enrollment and identity matching are out of scope.",
         ),
         "random_phrase_verification": phrase_check,
+        "required_voice_check": CheckResult(
+            status="passed" if challenge.audio_submitted else "failed",
+            detail=(
+                "The fresh spoken phrase was successfully recognized and passed the audio-quality gate."
+                if challenge.audio_submitted
+                else "The required voice phrase was not successfully recognized and quality-checked; the overall challenge fails."
+            ),
+        ),
         "audio_spoof_detection": audio_spoof_check,
         "audio_capture_quality": audio_quality_check,
         "capture_quality": CheckResult(
             status=(
-                "unavailable" if challenge.video_override_reason is not None or challenge.video_simulated
+                "unavailable" if challenge.video_override_reason is not None
                 else "review" if server_capture_duration_ms < 4_000
                 else "passed"
             ),
@@ -1566,9 +1533,6 @@ def submit_evidence(session_id: UUID, body: EvidenceSubmission) -> VerificationR
                     "Video screening was manually skipped by an administrator; "
                     "no recorded-video quality result is available. "
                     if challenge.video_override_reason is not None
-                    else "A demo simulation was shown; no video was uploaded for AI screening, "
-                    "so no recorded-video quality result is available. "
-                    if challenge.video_simulated
                     else f"AI-screened {len(state.video_frames or [])} sampled frames from the complete recorded QR movement and "
                 )
                 + (
@@ -1579,13 +1543,14 @@ def submit_evidence(session_id: UUID, body: EvidenceSubmission) -> VerificationR
         ),
     }
     challenge_passed = qr_passed and path_coherent
-    decision = (
-        "inconclusive"
-        if challenge.video_override_reason is not None
-        or challenge.qr_step_overrides
-        or (challenge.video_simulated and challenge_passed)
-        else "review" if challenge_passed else "challenge_failed"
-    )
+    if challenge.qr_test_failure_reason is not None or not challenge.audio_submitted:
+        decision = "challenge_failed"
+    elif challenge.video_override_reason is not None or challenge.qr_step_overrides:
+        decision = "inconclusive"
+    elif not challenge_passed:
+        decision = "challenge_failed"
+    else:
+        decision = "review"
     generated_at = utc_now()
     audit_payload = {
         "decision": decision,
@@ -1610,16 +1575,18 @@ def submit_evidence(session_id: UUID, body: EvidenceSubmission) -> VerificationR
                 else []
             ),
             *(
-                [
-                    f"Video AI screening was simulated for {VIDEO_SIMULATION_SECONDS} seconds in the demo; "
-                    "no classifier ran and video authenticity is unavailable."
-                ]
-                if challenge.video_simulated
+                ["One or more randomized QR steps were manually skipped by an administrator; skipped steps are unavailable, not verified."]
+                if challenge.qr_step_overrides
                 else []
             ),
             *(
-                ["One or more randomized QR steps were manually skipped by an administrator; skipped steps are unavailable, not verified."]
-                if challenge.qr_step_overrides
+                [f"The QR test was marked failed by an administrator for this demo: {challenge.qr_test_failure_reason}."]
+                if challenge.qr_test_failure_reason is not None
+                else []
+            ),
+            *(
+                ["The required fresh-phrase voice check was not successfully completed; the overall challenge is failed."]
+                if not challenge.audio_submitted
                 else []
             ),
             "The audit log is an in-memory hash-chain simulator, not a real blockchain; only evidence hashes and chain metadata are recorded.",

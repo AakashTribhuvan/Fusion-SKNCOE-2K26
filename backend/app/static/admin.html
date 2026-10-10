@@ -64,11 +64,11 @@
       <section class="intro">
         <p class="eyebrow">Operator page · development only</p>
         <h1>Session controls</h1>
-        <p>Monitor in-memory demo sessions and recover a QR or video step that is genuinely stuck. When the demo is shared through Cloudflare, this page and its controls are also reachable through that public URL.</p>
+        <p>Monitor in-memory demo sessions, recover a QR or video step that is genuinely stuck, or deliberately fail a QR test for a supervised demonstration. When shared through Cloudflare, this page and its controls are also reachable through that public URL.</p>
       </section>
       <aside class="warning">
         <strong>Anyone with the public demo URL can use these passwordless controls.</strong>
-        Only enable this during a supervised development demo. Skipping a QR code advances the paired phone to the next code but does not create scan evidence; skipping any QR code makes the final report inconclusive. A video override discards screening results and also makes the report inconclusive. Reasons and times are recorded in the report. Disable admin controls when the demo ends.
+        Only enable this during a supervised development demo. Skipping a QR code advances the paired phone but creates no scan evidence; skipping any QR code makes the final report inconclusive. The QR failure control marks the QR check failed in the report. A video override discards screening results and makes the report inconclusive. Actions and reasons are recorded in the report. Disable admin controls when the demo ends.
       </aside>
       <section class="panel" aria-labelledby="sessions-heading">
         <div class="list-heading">
@@ -150,6 +150,45 @@
             card.append(note);
           }
 
+          if (session.qr_test_failed) {
+            card.append(element('p', 'override-note', `QR test marked failed · ${session.qr_test_failure_reason || 'No reason supplied.'} · ${displayTime(session.qr_test_failure_at)}.`));
+          } else if (session.can_force_qr_failure && session.challenge_id && session.status === 'active') {
+            const failureForm = element('form', 'override-form');
+            const reasonWrap = element('div');
+            const reasonId = `qr-failure-reason-${session.id}`;
+            const reasonLabel = element('label', '', 'Why is the QR test being failed for this demo?');
+            reasonLabel.htmlFor = reasonId;
+            const reason = element('input');
+            reason.id = reasonId;
+            reason.name = 'reason';
+            reason.required = true;
+            reason.minLength = 8;
+            reason.maxLength = 300;
+            reason.placeholder = 'Example: demonstrate the failed QR outcome';
+            const submit = element('button', '', 'Fail QR test · demo');
+            submit.type = 'submit';
+            reasonWrap.append(reasonLabel, reason);
+            failureForm.append(reasonWrap, submit);
+            failureForm.addEventListener('submit', async (event) => {
+              event.preventDefault();
+              if (!window.confirm('Mark the QR test as failed for this demo? The final report will show the failure.')) return;
+              submit.disabled = true;
+              refreshStatus.textContent = `Marking QR test failed for session ${session.id}…`;
+              try {
+                const updated = await request(`/api/admin/sessions/${session.id}/fail-qr-test`, {
+                  method: 'POST',
+                  body: JSON.stringify({challenge_id: session.challenge_id, reason: reason.value.trim()}),
+                });
+                refreshStatus.textContent = `QR test marked failed for ${updated.id}; the final report will reflect the demo failure.`;
+                await refreshSessions();
+              } catch (error) {
+                refreshStatus.textContent = `QR test not failed: ${error.message}`;
+                submit.disabled = false;
+              }
+            });
+            card.append(failureForm);
+          }
+
           if (session.can_skip_qr_step && session.challenge_id && session.status === 'active') {
             const skipForm = element('form', 'override-form qr-override-form');
             const reasonWrap = element('div');
@@ -216,7 +255,7 @@
                   method: 'POST',
                   body: JSON.stringify({challenge_id: session.challenge_id, reason: reason.value.trim()}),
                 });
-                refreshStatus.textContent = `Video screening skipped for ${updated.id}. The participant page will advance to the optional voice step.`;
+                refreshStatus.textContent = `Video screening skipped for ${updated.id}. The participant page will advance to the required voice step.`;
                 await refreshSessions();
               } catch (error) {
                 refreshStatus.textContent = `Override not applied: ${error.message}`;

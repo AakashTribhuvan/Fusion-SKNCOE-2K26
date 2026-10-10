@@ -351,8 +351,8 @@
 </head>
 <body>
 <main class="shell">
-  <header class="masthead"><div class="brand"><div class="mark" aria-hidden="true"><i></i><i></i><i></i></div><span>FRAME/CHECK</span></div><span class="mast-label">Live QR checks &nbsp;·&nbsp; Demo video screening</span><div class="mast-right"><span id="service-status" class="environment">SERVICE CHECKING</span><span class="api-label">LOCAL API · 8000</span></div></header>
-  <section class="hero"><div><p class="eyebrow">Live QR checks / demo screening</p><h1>Look closer.<span>Keep the evidence.</span></h1><p class="lede">Examine a live QR movement check. Each accepted scan is tied to a timestamp; simulated or unavailable AI analysis stays visible.</p></div><aside class="hero-note"><strong>Scope note / 01</strong><p>No enrolled face baseline or speaker identity match is used. Optional voice classifiers produce uncalibrated research scores; this demo does not run recorded-video AI analysis. QR motion and face presence are separate checks.</p></aside></section>
+  <header class="masthead"><div class="brand"><div class="mark" aria-hidden="true"><i></i><i></i><i></i></div><span>FRAME/CHECK</span></div><span class="mast-label">Live QR checks &nbsp;·&nbsp; Video screening</span><div class="mast-right"><span id="service-status" class="environment">SERVICE CHECKING</span><span class="api-label">LOCAL API · 8000</span></div></header>
+  <section class="hero"><div><p class="eyebrow">Live QR checks / video screening</p><h1>Look closer.<span>Keep the evidence.</span></h1><p class="lede">Examine a live QR movement check and run the video-screening classifier on the recorded clip. Unavailable results remain visible.</p></div><aside class="hero-note"><strong>Scope note / 01</strong><p>No enrolled face baseline or speaker identity match is used. With camera consent, the recorded clip is submitted for experimental frame-based deepfake screening; model outputs are research signals, not proof of identity or authenticity. QR motion and face presence are separate checks.</p></aside></section>
 
   <div class="workspace-head"><div><h2>Verification workspace</h2><p>Run Frame’s real verification flow directly inside either unofficial bank-style portal.</p></div></div>
   <div id="bank-flow-context" class="bank-flow-context" hidden></div>
@@ -393,8 +393,8 @@
 
     <section id="panel-qr" class="tab-panel" role="tabpanel" aria-labelledby="tab-qr" hidden>
       <section id="capture-card" class="card capture-card">
-        <div class="card-heading"><div><h2>QR target path + video-screening demo</h2><p class="muted">The camera waits for the fresh QR in box 1, then records the movement through all six numbered boxes. Afterward, a 15-second demo progress simulation runs; no video classifier is loaded or run.</p></div><span id="capture-mode" class="pill">CAMERA OFF</span></div>
-        <label class="consent"><input id="camera-consent" type="checkbox"><span>I consent to the live QR check and up to 1 minute of camera recording. QR preview frames are sent to the API for face-presence and QR-path checks. The recorded video stays in this tab for the final report preview and is not uploaded for AI screening or saved to disk. Its temporary copy is cleared when you start another examination or close the tab. The following 15-second video-screening step is a demo simulation, not an AI analysis. The browser asks for camera permission separately.</span></label>
+        <div class="card-heading"><div><h2>QR target path + video screening</h2><p class="muted">The camera waits for the fresh QR in box 1, then records the movement through all six numbered boxes. After capture, the clip is uploaded for actual frame-based video screening. The report includes the model result when enough face-bearing frames are available.</p></div><span id="capture-mode" class="pill">CAMERA OFF</span></div>
+        <label class="consent"><input id="camera-consent" type="checkbox"><span>I consent to the live QR check and up to 1 minute of camera recording. QR preview frames are sent to the API for face-presence and QR-path checks. The recorded video is uploaded to the API for experimental frame-based AI screening, processed in memory, and not saved to disk; a temporary copy remains in this tab for report preview and is cleared when you start another examination or close the tab. The browser asks for camera permission separately.</span></label>
         <div class="motion-directions">
           <ol>
             <li>Keep your face visible in the middle of the camera view. Hold the phone QR steady in box 1 at the right edge (about 15–20 cm away) until the laptop shows <strong>FACE IN FRAME</strong> and <strong>QR LOCK</strong>; the six targets stay around the edges, clear of your face.</li>
@@ -406,7 +406,7 @@
         </div>
         <p id="scan-directions" class="scan-directions">Keep your face visible in the center. Hold the QR in box 1 at the right edge until FACE IN FRAME and QR LOCK; recording begins then. Follow the perimeter boxes in order, keeping your face visible. Recording ends after box 6. Camera preview stays natural; only the scan copy is contrast-enhanced.</p>
         <div class="row"><button id="capture" class="btn" disabled>Start camera and find first QR</button><span id="capture-status" class="muted" role="status" aria-live="polite">Camera is off. No frames or video are being captured.</span></div>
-        <div id="video-progress" class="work-progress" role="status" aria-live="polite" aria-busy="false" hidden><div class="work-progress-track" role="progressbar" aria-label="Demo video screening progress" aria-valuemin="0" aria-valuemax="100"><span class="work-progress-fill"></span></div><span id="video-progress-label"></span></div>
+        <div id="video-progress" class="work-progress" role="status" aria-live="polite" aria-busy="false" hidden><div class="work-progress-track" role="progressbar" aria-label="Video AI screening progress" aria-valuemin="0" aria-valuemax="100"><span class="work-progress-fill"></span></div><span id="video-progress-label"></span></div>
         <div id="viewer" class="viewer"><div class="viewer-frame"></div><div class="viewer-empty"><strong>CAMERA OFF</strong><span>Consent, then center your face and place the phone QR in target box 1.</span><small>FACE + QR LOCK REQUIRED TO START RECORDING</small></div><div id="face-indicator" class="face-indicator hidden" role="status" aria-live="polite">FACE CHECK WAITING</div><div id="target-zones" class="target-zones hidden" aria-hidden="true"><span class="target-zone" data-zone="1">1</span><span class="target-zone" data-zone="2">2</span><span class="target-zone" data-zone="3">3</span><span class="target-zone" data-zone="4">4</span><span class="target-zone" data-zone="5">5</span><span class="target-zone" data-zone="6">6</span></div><div id="qr-tracker" class="qr-tracker hidden" aria-hidden="true"><span>QR SEARCHING</span></div><video id="preview" class="hidden" autoplay muted playsinline aria-label="Mirrored live camera preview used to scan the phone QR code"></video></div>
         <div class="camera-controls" aria-label="Camera focus and exposure controls">
           <button id="refocus-camera" class="camera-control-button" type="button" disabled>REFRESH AUTOFOCUS</button>
@@ -421,8 +421,8 @@
 
     <section id="panel-voice" class="tab-panel" role="tabpanel" aria-labelledby="tab-voice" hidden>
       <section class="card">
-        <h2>Optional voice screening</h2>
-        <p class="tab-intro">This is a separate, optional test. It checks a fresh spoken phrase and an AI-voice screening signal; it does not identify or match a speaker. The updated voice model downloads about 1.2 GB of weights the first time it is used.</p>
+        <h2>Required voice check</h2>
+        <p class="tab-intro">A fresh spoken phrase must be recognized and pass the audio-quality check for the overall challenge to pass. The AI-voice signal is separate and does not identify or match a speaker. The voice model downloads about 1.2 GB of weights the first time it is used.</p>
         <ol class="tab-intro">
           <li>Move to a quiet place and keep the microphone about 15–25 cm away.</li>
           <li>After you explicitly consent and start, allow microphone access, then say the displayed three-word phrase once at a natural pace.</li>
@@ -431,11 +431,11 @@
         <label class="consent"><input id="audio-consent" type="checkbox"><span>I consent to record and submit up to eight seconds of microphone audio for this phrase check and AI-voice screening. Audio is not saved and no voiceprint or speaker identity is created.</span></label>
         <p id="voice-prompt" class="voice-result hidden" aria-live="polite"></p>
         <div id="waveform-wrap" class="waveform-wrap hidden"><canvas id="voice-waveform" aria-label="Live microphone waveform visualization"></canvas><div class="waveform-label"><span>LIVE AUDIO WAVEFORM</span><span>RECORDING · UP TO 8 SEC</span></div></div>
-        <p id="voice-status" class="camera-control-status" role="status" aria-live="polite">Microphone is off. You can skip this optional step and view the report.</p>
+        <p id="voice-status" class="camera-control-status" role="status" aria-live="polite">Microphone is off. Complete the required fresh-phrase voice check; skipping it makes the report fail.</p>
         <div id="voice-progress" class="work-progress" role="status" aria-live="polite" aria-busy="false" hidden><div class="work-progress-track" role="progressbar" aria-label="Voice screening progress" aria-valuemin="0" aria-valuemax="100"><span class="work-progress-fill"></span></div><span id="voice-progress-label"></span></div>
         <div class="tab-actions">
           <button id="run-voice" class="btn" disabled>Start voice check</button>
-          <button id="skip-voice" class="secondary-btn" type="button">Skip voice and view report</button>
+          <button id="skip-voice" class="secondary-btn" type="button">Skip voice · report will fail</button>
           <button id="finish-voice" class="secondary-btn hidden" type="button">Finish and view report</button>
         </div>
       </section>
@@ -482,10 +482,10 @@
           <div class="bank-body">
             <section class="bank-card">
               <h3>Frame identity verification</h3>
-              <p class="bank-flow-note"><strong>Live Frame software · HDFC-style account context</strong>Phone verification, randomized QR challenge, a demo-only video-screening progress step, optional voice screening, and the evidence report use this project’s UI and backend. The video classifier does not run in this demo flow. Camera and microphone are requested only by the corresponding consented steps.</p>
+              <p class="bank-flow-note"><strong>Live Frame software · HDFC-style account context</strong>Phone verification, randomized QR challenge, frame-based deepfake video screening, required phrase-recognition voice check, and evidence report use this project’s UI and backend. Camera and microphone are requested only by the corresponding consented steps.</p>
               <iframe id="bank-flow-hdfc" class="bank-flow-frame" title="Frame live identity verification inside the unofficial HDFC-inspired account portal" loading="lazy" allow="camera; microphone; publickey-credentials-get; publickey-credentials-create"></iframe>
             </section>
-            <aside class="bank-sidecard"><h3>Secure identity check</h3><div class="bank-help-link">Phone passkey verification</div><div class="bank-help-link">Six-step live QR challenge</div><div class="bank-help-link">Video and optional voice screening</div><div class="bank-demo-callout">Unofficial HDFC-inspired page<br><strong>Powered by Frame / Check</strong><br>No HDFC login, banking API, or account opening is connected.</div></aside>
+            <aside class="bank-sidecard"><h3>Secure identity check</h3><div class="bank-help-link">Phone passkey verification</div><div class="bank-help-link">Six-step live QR challenge</div><div class="bank-help-link">Video screening + required voice phrase</div><div class="bank-demo-callout">Unofficial HDFC-inspired page<br><strong>Powered by Frame / Check</strong><br>No HDFC login, banking API, or account opening is connected.</div></aside>
           </div>
         </section>
         <p class="bank-disclaimer">Unofficial HDFC-inspired integration demo; not affiliated with HDFC Bank. Frame’s real local verification backend runs inside this bank-style page. No real bank login or account service is connected.</p>
@@ -515,10 +515,10 @@
           <div class="bank-body">
             <section class="bank-card">
               <h3>Frame identity verification</h3>
-              <p class="bank-flow-note"><strong>Live Frame software · ICICI-style account context</strong>Phone verification, randomized QR challenge, a demo-only video-screening progress step, optional voice screening, and the evidence report use this project’s UI and backend. The video classifier does not run in this demo flow. Camera and microphone are requested only by the corresponding consented steps.</p>
+              <p class="bank-flow-note"><strong>Live Frame software · ICICI-style account context</strong>Phone verification, randomized QR challenge, frame-based deepfake video screening, required phrase-recognition voice check, and evidence report use this project’s UI and backend. Camera and microphone are requested only by the corresponding consented steps.</p>
               <iframe id="bank-flow-icici" class="bank-flow-frame" title="Frame live identity verification inside the unofficial ICICI-inspired account portal" loading="lazy" allow="camera; microphone; publickey-credentials-get; publickey-credentials-create"></iframe>
             </section>
-            <aside class="bank-sidecard"><h3>Secure identity check</h3><div class="bank-help-link">Phone passkey verification</div><div class="bank-help-link">Six-step live QR challenge</div><div class="bank-help-link">Video and optional voice screening</div><div class="bank-demo-callout">Unofficial ICICI-inspired page<br><strong>Powered by Frame / Check</strong><br>No ICICI login, banking API, or account opening is connected.</div></aside>
+            <aside class="bank-sidecard"><h3>Secure identity check</h3><div class="bank-help-link">Phone passkey verification</div><div class="bank-help-link">Six-step live QR challenge</div><div class="bank-help-link">Video screening + required voice phrase</div><div class="bank-demo-callout">Unofficial ICICI-inspired page<br><strong>Powered by Frame / Check</strong><br>No ICICI login, banking API, or account opening is connected.</div></aside>
           </div>
         </section>
         <p class="bank-disclaimer">Unofficial ICICI-inspired integration demo; not affiliated with ICICI Bank. Frame’s real local verification backend runs inside this bank-style page. No real bank login or account service is connected.</p>
@@ -609,6 +609,40 @@
     }
     return data;
   };
+  const uploadVideoForScreening = (path, blob) => new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', path);
+    xhr.setRequestHeader('Content-Type', (blob.type || 'video/webm').split(';', 1)[0]);
+    xhr.setRequestHeader('X-Video-Consent', 'true');
+    xhr.upload.addEventListener('progress', (event) => {
+      if (!event.lengthComputable) {
+        setWorkProgress('video', true, 'Uploading recorded video for AI screening…');
+        return;
+      }
+      const percent = Math.min(99, Math.floor(event.loaded / event.total * 100));
+      setWorkProgress('video', true, `Uploading video for AI screening · ${percent}%`, percent);
+    });
+    xhr.upload.addEventListener('load', () => {
+      setWorkProgress('video', true, 'Video uploaded. Running face-frame deepfake screening…');
+    });
+    xhr.addEventListener('load', () => {
+      let result;
+      try {
+        result = JSON.parse(xhr.responseText);
+      } catch {
+        reject(new Error(`Video screening returned an invalid response (${xhr.status}).`));
+        return;
+      }
+      if (xhr.status < 200 || xhr.status >= 300) {
+        reject(new Error(result.detail || `Video screening failed (${xhr.status}).`));
+        return;
+      }
+      resolve(result);
+    });
+    xhr.addEventListener('error', () => reject(new Error('The video could not be uploaded for screening. Check the connection and retry.')));
+    xhr.addEventListener('abort', () => reject(new Error('The video screening upload was cancelled.')));
+    xhr.send(blob);
+  });
   const updateTargetZones = (progress) => {
     document.querySelectorAll('.target-zone').forEach((zone) => {
       const number = Number(zone.dataset.zone);
@@ -689,7 +723,7 @@
   const captureVoicePhrase = async (activeChallenge) => {
     const prompt = await request(`/api/sessions/${session.id}/challenge/${activeChallenge.id}/audio-prompt`);
     if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
-      throw new Error('This browser cannot record audio here. Use a current browser over HTTPS, or leave the optional voice check off.');
+      throw new Error('This browser cannot record audio here. Use a current browser over HTTPS to complete the required voice check.');
     }
     const promptElement = $('voice-prompt');
     promptElement.replaceChildren(document.createTextNode('Say this phrase once after recording starts. You have up to eight seconds:'));
@@ -983,7 +1017,7 @@
     $('capture').disabled = true;
     $('capture-mode').textContent = 'VIDEO SKIPPED · ADMIN OVERRIDE';
     $('capture-status').textContent = `ADMIN OVERRIDE · Video screening was skipped: ${reason} No video result was produced.`;
-    $('queue-copy').textContent = 'Video screening was manually skipped. Continue to the optional voice check or skip it to see an inconclusive report.';
+    $('queue-copy').textContent = 'Video screening was manually skipped. Complete the required voice check; skipping it makes the report fail.';
     $('tab-voice').disabled = false;
     $('tab-qr').disabled = false;
     $('tab-phone').disabled = false;
@@ -1168,7 +1202,7 @@
     $('camera-consent').checked = false;
     $('audio-consent').checked = false;
     $('voice-prompt').classList.add('hidden');
-    $('voice-status').textContent = 'Microphone is off. You can skip this optional step and view the report.';
+    $('voice-status').textContent = 'Microphone is off. Complete the required fresh-phrase voice check; skipping it makes the report fail.';
     $('run-voice').classList.remove('hidden');
     $('run-voice').disabled = true;
     $('skip-voice').classList.remove('hidden');
@@ -1369,48 +1403,23 @@
       $('preview').srcObject = null;
       $('preview').classList.add('hidden');
       $('viewer').classList.remove('streaming');
-      $('capture-status').textContent = 'Movement recorded. Starting the 15-second video-screening demo…';
+      $('capture-status').textContent = 'Movement recorded. Uploading clip for video screening…';
       adminOverrideObserved = false;
-      const simulation = await request(
-        `/api/sessions/${session.id}/challenge/${challenge.id}/video/demo/start`,
-        {method: 'POST', headers: {'X-Video-Consent': 'true'}},
-      );
       videoProcessingWatch = true;
       monitorVideoOverride();
-      const simulationStartedAt = performance.now();
-      const durationMs = simulation.duration_seconds * 1000;
-      while (performance.now() - simulationStartedAt < durationMs) {
-        if (adminOverrideObserved) return;
-        const elapsedMs = performance.now() - simulationStartedAt;
-        const percent = Math.min(99, Math.floor(elapsedMs / durationMs * 100));
-        setWorkProgress('video', true, `Video screening progress · ${percent}%`, percent);
-        await new Promise(resolve => setTimeout(resolve, Math.min(100, durationMs - elapsedMs)));
-      }
+      const screeningResult = await uploadVideoForScreening(
+        `/api/sessions/${session.id}/challenge/${challenge.id}/video`,
+        recording.blob,
+      );
       if (adminOverrideObserved) return;
-      setWorkProgress('video', true, 'Saving demo-only screening status…', 100);
-      let simulationResult;
-      try {
-        simulationResult = await request(
-          `/api/sessions/${session.id}/challenge/${challenge.id}/video/demo/complete`,
-          {method: 'POST', headers: {'X-Video-Consent': 'true'}},
-        );
-      } catch (error) {
-        if (error.status === 409) {
-          const current = await request(`/api/sessions/${session.id}`);
-          if (current.video_manually_skipped) {
-            continueAfterVideoOverride(current.video_override_reason || 'No reason supplied.');
-            return;
-          }
-        }
-        throw error;
-      }
-      setWorkProgress('video', false);
       videoProcessingWatch = false;
-      if (adminOverrideObserved) return;
+      setWorkProgress('video', false);
+      $('video-progress').hidden = true;
+      $('video-progress').setAttribute('aria-busy', 'false');
       challengeReady = false;
-      $('capture-mode').textContent = 'DEMO SIMULATION';
-      $('capture-status').textContent = simulationResult.detail;
-      $('queue-copy').textContent = 'QR checks complete; video AI screening was simulated only. Continue to the optional voice tab or skip it.';
+      $('capture-mode').textContent = 'VIDEO SCREENING COMPLETE';
+      $('capture-status').textContent = screeningResult.detail;
+      $('queue-copy').textContent = `Video screening completed: ${screeningResult.frames_with_faces} face-bearing frames from ${screeningResult.frames_sampled} sampled. Complete the required voice check.`;
       $('tab-voice').disabled = false;
       $('tab-qr').disabled = false;
       $('challenge').disabled = true;
@@ -1452,7 +1461,7 @@
     voiceRunning = true;
     $('run-voice').disabled = true;
     $('skip-voice').disabled = true;
-    $('voice-status').textContent = 'Preparing the optional voice models. The microphone remains off until model setup finishes.';
+    $('voice-status').textContent = 'Preparing the required voice models. The microphone remains off until model setup finishes.';
     setWorkProgress('voice', true, 'Loading voice classifier and phrase-recognition models…');
     try {
       const models = await request('/api/models/warmup', {
@@ -1477,7 +1486,7 @@
         $('run-voice').classList.add('hidden');
       }
     } catch (error) {
-      $('voice-status').textContent = `Voice check unavailable: ${errorMessage(error)} No audio was retained. You can retry or skip this optional check.`;
+      $('voice-status').textContent = `Voice check unavailable: ${errorMessage(error)} No audio was retained. Retry, or submit the report knowing it will fail without a successful phrase check.`;
       $('skip-voice').disabled = false;
     } finally {
       setWorkProgress('voice', false);
@@ -1517,7 +1526,7 @@
     }
   }
   function renderReport(report) {
-    const labels = {phone_pairing:'Phone pairing',phone_user_verification:'Phone user verification',randomized_qr_sequence:'Randomized QR sequence',phone_motion:'Phone movement',challenge_path_coherence:'Square target path',face_deepfake_analysis:'Video classifier',video_temporal_consistency:'Cross-frame video consistency',video_screening_simulation:'Video-screening demo simulation',video_screening_override:'Video override',speaker_verification:'Speaker identity match (not used)',random_phrase_verification:'Fresh phrase verification',audio_spoof_detection:'Audio anti-spoof screening',audio_capture_quality:'Audio capture quality',capture_quality:'Capture quality'};
+    const labels = {phone_pairing:'Phone pairing',phone_user_verification:'Phone user verification',randomized_qr_sequence:'Randomized QR sequence',phone_motion:'Phone movement',challenge_path_coherence:'Square target path',face_deepfake_analysis:'Video deepfake screening',video_temporal_consistency:'Cross-frame video consistency',video_screening_override:'Video override',speaker_verification:'Speaker identity match (not used)',required_voice_check:'Required voice check',random_phrase_verification:'Fresh phrase verification',audio_spoof_detection:'Audio anti-spoof screening',audio_capture_quality:'Audio capture quality',capture_quality:'Capture quality',qr_test_failure:'Admin QR test failure'};
     const reportElement = $('report');
     reportElement.replaceChildren();
     Object.entries(report.checks).forEach(([key, value]) => {
@@ -1532,10 +1541,8 @@
     });
     const decisions = {
       review: 'REVIEW · Challenge completed; research-model outputs are signals only and need human evaluation.',
-      inconclusive: report.checks.video_screening_simulation
-        ? 'INCONCLUSIVE · Video AI screening was simulated; no video authenticity result is available.'
-        : 'INCONCLUSIVE · Evidence was insufficient; capture quality or unavailable checks need attention.',
-      challenge_failed: 'CHALLENGE FAILED · The required randomized QR sequence was not completed.',
+      inconclusive: 'INCONCLUSIVE · Video or QR screening was skipped or unavailable; an inconclusive result is not a pass.',
+      challenge_failed: 'CHALLENGE FAILED · The required QR sequence/path or fresh-phrase voice check was not completed.',
     };
     $('report-decision').textContent = decisions[report.decision] || `RESULT · ${report.decision}`;
     const previewCard = $('recorded-video-preview-card');
@@ -1592,8 +1599,8 @@
     const median = faceEvidence.median_fake_score;
     const spread = faceEvidence.score_range;
     const threshold = Number.isFinite(faceEvidence.model_threshold) ? faceEvidence.model_threshold : 0.38;
-    const visual = addCard('Video classifier', median == null
-      ? `No face-classifier score summary is available. ${face.detail || 'The video screening may have been unavailable, skipped, or lacked scored face samples.'}`
+    const visual = addCard('Video deepfake screening', median == null
+      ? `${face.detail || 'No face-classifier score summary is available.'}`
       : `Experimental video-screening consensus: ${faceEvidence.model_verdict || 'INCONCLUSIVE'}; aggregate AI-like score ${formatScore(faceEvidence.aggregate_fake_score)}; ${faceEvidence.flagged_frames ?? '—'} frame(s) at or above the ${Math.round(threshold * 100)}% screening threshold. Median score ${formatScore(median)}; score spread ${formatScore(spread)}. These uncalibrated research scores are not identity or authenticity determinations.`);
     const frameSamples = Array.isArray(faceEvidence.frames) ? faceEvidence.frames.slice(0, 8) : [];
     const validSamples = frameSamples.filter(frame => Number.isFinite(frame.fake_score) && Number.isFinite(frame.real_score));
