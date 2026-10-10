@@ -27,7 +27,7 @@ class PhraseMatchService:
                 "status": "incomplete",
                 "expected_phrase": expected_phrase,
                 "recognized_phrase": recognized_phrase,
-                "exact_match": False,
+                "exact_match": None,
                 "similarity": 0.0,
                 "similarity_percentage": 0.0,
                 "missing_words": expected.split() if expected else [],
