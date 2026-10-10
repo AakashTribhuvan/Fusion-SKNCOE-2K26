@@ -72,6 +72,11 @@ Start the API and cross-network phone demo (recommended):
 
 The launcher checks the environment, prepares `cloudflared` if needed, starts the tunnel and API, verifies local API health and a registered Cloudflare connection, and opens the random URL. A blocked public self-check from the laptop is shown as a warning rather than stopping the demo. The laptop and phone can use different networks. Keep the launcher window open; press Ctrl+C or close it to stop the API and tunnel. For laptop-only use without a tunnel, the manual development-server command is:
 
+For a stable shareable URL that redirects to the current Quick Tunnel, see the
+[Cloudflare Workers redirect setup](CLOUDFLARE_REDIRECT.md). The redirect does
+not host FRAME; keep the local app and tunnel running and update the Worker
+after each tunnel restart.
+
 ```powershell
 .\.venv\Scripts\python.exe -m uvicorn backend.app.main:app --reload
 ```

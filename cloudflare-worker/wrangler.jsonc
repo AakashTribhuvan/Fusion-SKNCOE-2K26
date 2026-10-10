@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "frame-permanent-link",
+  "main": "src/index.js",
+  "compatibility_date": "2025-10-10",
+  "workers_dev": true,
+  "kv_namespaces": [
+    {
+      "binding": "FRAME_LINKS",
+      "id": "6291a95f331a439d9ae1d767f125faf1"
+    }
+  ]
+}
