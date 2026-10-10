@@ -2,6 +2,7 @@
 .venv/
 venv/
 .tools/
+.wrangler/
 __pycache__/
 *.py[cod]
 .pytest_cache/
