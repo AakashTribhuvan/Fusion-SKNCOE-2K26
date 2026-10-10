@@ -24,10 +24,10 @@ if errorlevel 1 (
     )
 )
 
-start "SWARAKSHA Video Backend" /D "%ROOT%" cmd /k ""%PYTHON%" -m uvicorn api.video_app:app --reload --host 127.0.0.1 --port 8000"
-start "SWARAKSHA Frontend" /D "%ROOT%frontend" cmd /k npm.cmd run dev -- --host 127.0.0.1
+start "Video Detection Model Backend" /D "%ROOT%" cmd /k ""%PYTHON%" -m uvicorn api.video_app:app --reload --host 127.0.0.1 --port 8000"
+start "Video Detection Model Frontend" /D "%ROOT%frontend" cmd /k npm.cmd run dev -- --host 127.0.0.1
 
-echo SWARAKSHA video screening started.
+echo Video Detection Model screening started.
 echo Backend:  http://localhost:8000
 echo Frontend: http://localhost:5173
 endlocal

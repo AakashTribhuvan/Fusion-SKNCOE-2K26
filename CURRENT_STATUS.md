@@ -1,4 +1,4 @@
-# SWARAKSHA — Project Status & Video Forensics Pipeline
+# Video Detection Model — Project Status & Video Forensics Pipeline
 
 **Last Updated:** October 10, 2026  
 **Active Branch:** `feat/video-forensics-frontend`  
@@ -51,7 +51,7 @@ Modern AI-generated videos (Google Veo diffusion samples) were erroneously class
 
 Evaluated end-to-end through the full video pipeline (`extract_video_metadata` $\rightarrow$ `sample_video_frames` $\rightarrow$ `RetinaFace` $\rightarrow$ `ViT Inference` $\rightarrow$ `Depth Anything V2` $\rightarrow$ `Consensus Engine`):
 
-| Test Video File | Ground Truth | Legacy Model Verdict | Calibrated SWARAKSHA Verdict | AI Prob | Real Prob | Frames Scored | Result |
+| Test Video File | Ground Truth | Legacy Model Verdict | Calibrated Video Detection Model Verdict | AI Prob | Real Prob | Frames Scored | Result |
 |---|---|---|---|---|---|---|---|
 | `Professional_speaking_to_camera_202608272223.mp4` | **AI (Veo)** | 99.7% Authentic ❌ | **AI-GENERATED VIDEO** | **85.5%** | 14.4% | 4 / 4 flagged | ✅ **CORRECT** |
 | `Create_a_video_of_this_person.mp4` | **AI (Veo)** | 98.6% Authentic ❌ | **AI-GENERATED VIDEO** | **46.5%** | 53.5% | 5 / 5 flagged | ✅ **CORRECT** |

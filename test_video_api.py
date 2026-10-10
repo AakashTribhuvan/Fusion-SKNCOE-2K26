@@ -284,7 +284,7 @@ class VideoApiEndpointTests(unittest.TestCase):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertEqual(data["status"], "SWARAKSHA video API is running")
+        self.assertEqual(data["status"], "Video Detection Model video API is running")
         self.assertFalse(data["identity_matching"])
 
     def test_unsupported_file_extension_rejected(self):
@@ -331,7 +331,7 @@ class CandidateModelEvaluationTests(unittest.TestCase):
         """17. Candidate evaluator executes cleanly and produces structured report."""
         from candidate_resnext_lstm_evaluator import evaluate_candidate
         report = evaluate_candidate()
-        self.assertIn("Model A (Current SWARAKSHA ViT)", report)
+        self.assertIn("Model A (Current Video Detection Model ViT)", report)
         self.assertIn("Model B (Reference ResNeXt-50 + LSTM)", report)
         model_b = report["Model B (Reference ResNeXt-50 + LSTM)"]
         self.assertEqual(model_b["Status"], "BLOCKED (Missing weights, broken dependencies, licensing conflict)")

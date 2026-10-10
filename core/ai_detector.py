@@ -1,5 +1,5 @@
 """
-AI-generated image detector module for the SWARAKSHA project.
+AI-generated image detector module for the Video Detection Model project.
 Uses a HuggingFace image classification model to detect deepfakes/AI-generated faces.
 """
 import sys
@@ -48,7 +48,7 @@ class AIImageDetector:
         else:
             self.device = device
             
-        print(f"[SWARAKSHA] Loading AI Detector model '{self.model_name}' on {self.device}...")
+        print(f"[VIDEO DETECTION MODEL] Loading AI Detector model '{self.model_name}' on {self.device}...")
         
         try:
             # Use ViTImageProcessor for SadraCoding model compatibility

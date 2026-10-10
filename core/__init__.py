@@ -1,1 +1,1 @@
-# SWARAKSHA Core Modules
+# Video Detection Model Core Modules

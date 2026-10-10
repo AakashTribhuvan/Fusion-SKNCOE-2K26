@@ -174,7 +174,7 @@ def evaluate_candidate():
         blockers.append(
             "DEPENDENCY BLOCKER: Reference code relies on `face_recognition` (dlib), which cannot be installed "
             "on Windows Python 3.12 without Microsoft Visual C++ Build Tools and CMake. "
-            "(The existing SWARAKSHA pipeline uses RetinaFace via DeepFace which runs cleanly on Windows)."
+            "(The existing Video Detection Model pipeline uses RetinaFace via DeepFace which runs cleanly on Windows)."
         )
     blockers.append(
         "CODE BUG IN REFERENCE REPO: In Django Application/ml_app/views.py line 44, device is hardcoded as 'gpu' "
@@ -189,7 +189,7 @@ def evaluate_candidate():
     )
     blockers.append(
         "LICENSING RESTRICTION: The reference repository is licensed under GNU General Public License v3.0 (GPL-3.0). "
-        "Incorporating its code directly into SWARAKSHA would infect the project with GPL-3.0 copyleft obligations."
+        "Incorporating its code directly into Video Detection Model would infect the project with GPL-3.0 copyleft obligations."
     )
 
     print("\n[3] Identified Blockers & Technical Limitations:")
@@ -198,7 +198,7 @@ def evaluate_candidate():
 
     # 4. Compare Architecture Specifications (Model A vs Model B)
     comparison = {
-        "Model A (Current SWARAKSHA ViT)": {
+        "Model A (Current Video Detection Model ViT)": {
             "Architecture": "Vision Transformer (google/vit-base-patch16-224 fine-tuned)",
             "Checkpoint Available": "YES (Hosted on Hugging Face: dima806/deepfake_vs_real_image_detection)",
             "License": "Apache-2.0 (Permissive, commercial and private use allowed)",

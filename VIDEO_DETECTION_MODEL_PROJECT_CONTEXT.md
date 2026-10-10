@@ -1,7 +1,7 @@
-# SWARAKSHA Project Context
+# Video Detection Model Project Context
 
 ## Overview
-SWARAKSHA is a local-first identity protection system designed to register trusted face references, recognize protected individuals in uploaded media, and check matched faces for signs of AI-generated manipulation. 
+Video Detection Model is a local-first identity protection system designed to register trusted face references, recognize protected individuals in uploaded media, and check matched faces for signs of AI-generated manipulation. 
 
 ## Key Capabilities
 1. **Identity Registration**: End-users can upload multiple reference images for a single identity. Features DeepFace for extraction and ArcFace for embeddings.

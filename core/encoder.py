@@ -1,5 +1,5 @@
 """
-SWARAKSHA — Face Encoder Module (AI Branch 1: Identity)
+Video Detection Model — Face Encoder Module (AI Branch 1: Identity)
 
 Uses DeepFace with RetinaFace detector and ArcFace model to:
 - Detect faces in images/video frames
@@ -164,8 +164,8 @@ def preload_models():
     Pre-download and cache model weights (RetinaFace + ArcFace).
     Call this once at application startup to avoid first-frame latency.
     """
-    print("[SWARAKSHA] Pre-loading face detection models...")
+    print("[VIDEO DETECTION MODEL] Pre-loading face detection models...")
     DeepFace.build_model(config.FACE_MODEL)
     print(f"  ✓ {config.FACE_MODEL} model loaded")
     print(f"  ✓ Detector backend: {config.DETECTOR_BACKEND}")
-    print("[SWARAKSHA] Models ready.")
+    print("[VIDEO DETECTION MODEL] Models ready.")

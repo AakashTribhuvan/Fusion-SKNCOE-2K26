@@ -1,5 +1,5 @@
 """
- SWARAKSHA — FastAPI Backend
+ Video Detection Model — FastAPI Backend
 Endpoints for face registration, recognition, and AI-generated image detection.
 """
 
@@ -26,7 +26,7 @@ from core.video_processor import extract_video_metadata, sample_video_frames
 from core.metadata_analyzer import MetadataAnalyzer
 
 app = FastAPI(
-    title="SWARAKSHA API",
+    title="Video Detection Model API",
     description="Face Registration, Recognition & AI Image Detection",
     version="2.0.0",
 )
@@ -51,11 +51,11 @@ metadata_analyzer: MetadataAnalyzer = None
 @app.on_event("startup")
 async def startup_event():
     global db, face_index, ai_detector, metadata_analyzer
-    print("[SWARAKSHA] ═══════════════════════════════════════")
-    print("[SWARAKSHA] Starting up...")
+    print("[VIDEO DETECTION MODEL] ═══════════════════════════════════════")
+    print("[VIDEO DETECTION MODEL] Starting up...")
 
     # 1. Database
-    print("[SWARAKSHA] Initializing database...")
+    print("[VIDEO DETECTION MODEL] Initializing database...")
     db = DatabaseManager()
     persons = db.list_persons()
     print(f"  ✓ Database ready — {len(persons)} registered person(s)")
@@ -64,22 +64,22 @@ async def startup_event():
     preload_models()
 
     # 3. FAISS face index
-    print("[SWARAKSHA] Loading FAISS face index...")
+    print("[VIDEO DETECTION MODEL] Loading FAISS face index...")
     face_index = FaceIndex(db=db)
     print(f"  ✓ FAISS index ready — {face_index.total_embeddings} embedding(s)")
 
     # 4. AI Image Detector (downloads model on first run ~340MB)
-    print("[SWARAKSHA] Loading AI Image Detector...")
+    print("[VIDEO DETECTION MODEL] Loading AI Image Detector...")
     ai_detector = AIImageDetector()
 
     # 5. Metadata Forensics Analyzer (no model needed)
-    print("[SWARAKSHA] Initializing Metadata Forensics Analyzer...")
+    print("[VIDEO DETECTION MODEL] Initializing Metadata Forensics Analyzer...")
     metadata_analyzer = MetadataAnalyzer()
     print("  ✓ Metadata Analyzer ready")
 
-    print("[SWARAKSHA] ═══════════════════════════════════════")
-    print("[SWARAKSHA] All systems operational!")
-    print("[SWARAKSHA] ═══════════════════════════════════════")
+    print("[VIDEO DETECTION MODEL] ═══════════════════════════════════════")
+    print("[VIDEO DETECTION MODEL] All systems operational!")
+    print("[VIDEO DETECTION MODEL] ═══════════════════════════════════════")
 
 
 # ── Helper ──────────────────────────────────────────────────────────────────
@@ -219,7 +219,7 @@ class VideoScanDetailedResponse(BaseModel):
 def health_check():
     """Health check endpoint."""
     return {
-        "status": "SWARAKSHA API is running",
+        "status": "Video Detection Model API is running",
         "version": "2.0.0",
         "registered_persons": len(db.list_persons()) if db else 0,
         "total_embeddings": face_index.total_embeddings if face_index else 0,

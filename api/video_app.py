@@ -1,6 +1,6 @@
 """Video-only screening API for the Frame/Check frontend.
 
-This app reuses Swaraksha's face detector, image classifier, frame sampler, and
+This app reuses Video Detection Model's face detector, image classifier, frame sampler, and
 metadata analyzer. It does not load the identity database or perform matching.
 """
 
@@ -32,15 +32,15 @@ from core.video_processor import extract_video_metadata, sample_video_frames
 
 
 ALLOWED_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".webm"}
-MAX_UPLOAD_BYTES = int(os.getenv("SWARAKSHA_MAX_VIDEO_BYTES", str(250 * 1024 * 1024)))
-MAX_VIDEO_SECONDS = float(os.getenv("SWARAKSHA_MAX_VIDEO_SECONDS", "180"))
+MAX_UPLOAD_BYTES = int(os.getenv("VIDEO_DETECTION_MODEL_MAX_VIDEO_BYTES", str(250 * 1024 * 1024)))
+MAX_VIDEO_SECONDS = float(os.getenv("VIDEO_DETECTION_MODEL_MAX_VIDEO_SECONDS", "180"))
 VIDEO_SAMPLE_INTERVAL = float(getattr(config, "VIDEO_SAMPLE_INTERVAL", 2.0))
-DEPTH_MODEL_ID = os.getenv("SWARAKSHA_DEPTH_MODEL", "depth-anything/Depth-Anything-V2-Small-hf")
+DEPTH_MODEL_ID = os.getenv("VIDEO_DETECTION_MODEL_DEPTH_MODEL", "depth-anything/Depth-Anything-V2-Small-hf")
 AI_THRESHOLD = float(getattr(config, "AI_DETECTOR_THRESHOLD", 0.38))
 _inference_lock = threading.RLock()
 
 app = FastAPI(
-    title="SWARAKSHA Video Screening API",
+    title="Video Detection Model Video Screening API",
     description="Video-only sampled-frame authenticity screening; no identity enrollment or matching.",
     version="3.0.0",
 )
@@ -49,7 +49,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
-        *[origin.strip() for origin in os.getenv("SWARAKSHA_FRONTEND_ORIGINS", "").split(",") if origin.strip()],
+        *[origin.strip() for origin in os.getenv("VIDEO_DETECTION_MODEL_FRONTEND_ORIGINS", "").split(",") if origin.strip()],
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST"],
@@ -573,7 +573,7 @@ def startup_event() -> None:
 @app.get("/")
 def health_check() -> dict[str, Any]:
     return {
-        "status": "SWARAKSHA video API is running",
+        "status": "Video Detection Model video API is running",
         "version": app.version,
         "mode": "video-authenticity-screening",
         "identity_matching": False,

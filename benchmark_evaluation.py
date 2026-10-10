@@ -1,5 +1,5 @@
 """
-Benchmark Evaluation Script for SWARAKSHA Video Authenticity Pipeline.
+Benchmark Evaluation Script for Video Detection Model Video Authenticity Pipeline.
 Evaluates the video classification pipeline on genuine and synthetic video samples.
 Calculates Confusion Matrix, Accuracy, Precision, Recall, F1, FPR, FNR,
 per-video runtime, and separates Deepfake/GAN performance from Modern Diffusion performance.
@@ -17,24 +17,26 @@ if sys.platform == 'win32' and hasattr(sys.stdout, 'reconfigure'):
 
 from api.video_app import _analyze_video
 
+eval_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "storage", "eval_videos")
+
 CURATED_DATASET = [
     # --- REAL VIDEOS ---
     {
-        "path": r"C:\Users\LOQ\OneDrive\Desktop\FusionHackathon\Swaraksha-publish\storage\eval_videos\real_obama.mp4",
+        "path": os.path.join(eval_dir, "real_obama.mp4"),
         "ground_truth": "REAL_VIDEO",
         "subtype": "REAL_SPEECH",
         "split": "calibration",
         "description": "Authentic public address speech (Barack Obama)"
     },
     {
-        "path": r"C:\Users\LOQ\OneDrive\Desktop\FusionHackathon\Swaraksha-publish\storage\eval_videos\real_einstein.mp4",
+        "path": os.path.join(eval_dir, "real_einstein.mp4"),
         "ground_truth": "REAL_VIDEO",
         "subtype": "REAL_ARCHIVAL",
         "split": "test",
         "description": "Authentic archival recording (Albert Einstein)"
     },
     {
-        "path": r"C:\Users\LOQ\OneDrive\Desktop\FusionHackathon\Swaraksha-publish\storage\eval_videos\real_lena.mp4",
+        "path": os.path.join(eval_dir, "real_lena.mp4"),
         "ground_truth": "REAL_VIDEO",
         "subtype": "REAL_PORTRAIT",
         "split": "test",
@@ -49,7 +51,7 @@ CURATED_DATASET = [
     },
     # --- AI / SYNTHETIC VIDEOS ---
     {
-        "path": r"C:\Users\LOQ\OneDrive\Desktop\FusionHackathon\Swaraksha-publish\storage\eval_videos\ai_stylegan.mp4",
+        "path": os.path.join(eval_dir, "ai_stylegan.mp4"),
         "ground_truth": "AI_GENERATED",
         "subtype": "AI_STYLEGAN_FACESWAP",
         "split": "calibration",
@@ -77,7 +79,7 @@ def run_benchmark(dataset=None, output_json=None):
         dataset = CURATED_DATASET
 
     print("=" * 85)
-    print("      SWARAKSHA VIDEO FORENSICS — EMPIRICAL BENCHMARK EVALUATION")
+    print("      VIDEO DETECTION MODEL VIDEO FORENSICS — EMPIRICAL BENCHMARK EVALUATION")
     print("=" * 85)
     print(f"Total Videos in Benchmark: {len(dataset)}")
     
@@ -280,7 +282,7 @@ def build_custom_dataset(directory, label):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="SWARAKSHA Video Forensics Benchmark")
+    parser = argparse.ArgumentParser(description="Video Detection Model Video Forensics Benchmark")
     parser.add_argument("--real-dir", type=str, help="Directory containing real test videos")
     parser.add_argument("--ai-dir", type=str, help="Directory containing AI test videos")
     parser.add_argument("--out", type=str, default=None, help="Output path for JSON results")

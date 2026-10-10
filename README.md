@@ -1,6 +1,6 @@
-# SWARAKSHA v2
+# Video Detection Model v2
 
-SWARAKSHA includes a local-first identity API and a focused video-authenticity screening interface. The default launcher runs the video-only API for Frame/Check; the original identity registration and matching API remains available as a separate entrypoint.
+Video Detection Model includes a local-first identity API and a focused video-authenticity screening interface. The default launcher runs the video-only API for Frame/Check; the original identity registration and matching API remains available as a separate entrypoint.
 
 This `trial_v2` folder is the cleaned runtime project. It contains the active backend and frontend only; the original `trial` folder remains the prototype/history workspace.
 
@@ -72,7 +72,7 @@ trial_v2/
 │   └── face_index.py           FAISS index persistence and matching
 ├── db/
 │   ├── database.py             SQLite person and embedding records
-│   └── swaraksha.db            Local database created at runtime
+│   └── video_detection_model.db Local database created at runtime
 ├── frontend/
 │   ├── src/DeepfakeWorkbench.jsx Video screening interface
 │   ├── src/deepfake.css        Frame/Check visual system
@@ -89,7 +89,7 @@ trial_v2/
 │   └── temp/                    Temporary processing files
 ├── config.py                   Central paths and detector thresholds
 ├── requirements.txt            Python dependencies
-├── start_swaraksha.bat         Windows launcher for backend and frontend
+├── start_video_detection_model.bat Windows launcher for backend and frontend
 └── README.md                   This document
 ```
 
@@ -103,7 +103,7 @@ Reports video API status, active mode, and whether the classifier is initialized
 
 Samples an uploaded video, detects face regions without identity matching, and returns classifier, relative-depth, face-track, and metadata evidence. Multipart field: `file`.
 
-Videos are sampled at `VIDEO_SAMPLE_INTERVAL` (two seconds by default), limited to 250 MB and 180 seconds by default. Override the limits with `SWARAKSHA_MAX_VIDEO_BYTES` and `SWARAKSHA_MAX_VIDEO_SECONDS`.
+Videos are sampled at `VIDEO_SAMPLE_INTERVAL` (two seconds by default), limited to 250 MB and 180 seconds by default. Override the limits with `VIDEO_DETECTION_MODEL_MAX_VIDEO_BYTES` and `VIDEO_DETECTION_MODEL_MAX_VIDEO_SECONDS`.
 
 ## Legacy Identity API Routes (`api.main`)
 
@@ -177,7 +177,7 @@ npm.cmd install
 Double-click:
 
 ```text
-start_swaraksha.bat
+start_video_detection_model.bat
 ```
 
 The launcher uses `.venv` and:

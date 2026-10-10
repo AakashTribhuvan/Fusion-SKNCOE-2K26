@@ -155,7 +155,7 @@ function App() {
         setQueue((current) => current.map((entry) => entry.id === item.id ? { ...entry, status: 'complete', result: response.data } : entry));
       } catch (error) {
         const message = error.response?.data?.detail || (error.code === 'ERR_NETWORK'
-          ? 'Swaraksha is not reachable. Start the backend at localhost:8000 and try again.'
+          ? 'Video Detection Model is not reachable. Start the backend at localhost:8000 and try again.'
           : 'The backend could not examine this recording.');
         setQueue((current) => current.map((entry) => entry.id === item.id ? { ...entry, status: 'error', error: message } : entry));
       }
@@ -171,7 +171,7 @@ function App() {
     }
   };
 
-  const statusCopy = backend === 'online' ? 'SWARAKSHA CONNECTED' : backend === 'checking' ? 'CHECKING SERVICE' : 'SERVICE OFFLINE';
+  const statusCopy = backend === 'online' ? 'VIDEO DETECTION MODEL CONNECTED' : backend === 'checking' ? 'CHECKING SERVICE' : 'SERVICE OFFLINE';
 
   return (
     <div className="forensic-app">
@@ -187,14 +187,14 @@ function App() {
       <main id="top" className="page-frame">
         <section className="intro-row">
           <div className="intro-copy">
-            <p className="eyebrow"><span>01</span> VIDEO FORENSICS / SWARAKSHA ENGINE</p>
+            <p className="eyebrow"><span>01</span> VIDEO FORENSICS / VIDEO DETECTION MODEL ENGINE</p>
             <h1>Look closer.<br /><em>Keep the evidence.</em></h1>
             <p className="intro-deck">Examine a recording for frame-level synthetic-media signals. Every score is tied to a sampled moment; missing analysis stays visible.</p>
           </div>
           <aside className="scope-note">
             <span className="scope-index">SCOPE NOTE / 01</span>
             <p>The connected model checks image crops from registered identities. If no frame is scored, this desk reports <strong>inconclusive</strong>, not authentic.</p>
-            <a href="https://github.com/AakashTribhuvan/Swaraksha/blob/main/VIDEO_PIPELINE.md" target="_blank" rel="noreferrer">PIPELINE NOTES <ArrowUpRight size={13} /></a>
+            <a href="https://github.com/AakashTribhuvan/Fusion-SKNCOE-2K26/blob/video-detection-model/VIDEO_PIPELINE.md" target="_blank" rel="noreferrer">PIPELINE NOTES <ArrowUpRight size={13} /></a>
           </aside>
         </section>
 
@@ -273,7 +273,7 @@ function App() {
                 {outcome && <OutcomePanel outcome={outcome} result={selected.result} />}
                 {selected.result && <AnalysisReport result={selected.result} onSeek={seekToFrame} />}
                 {!selected.result && !selected.error && (
-                  <div className="awaiting-report"><span>{selected.status === 'queued' ? 'READY WHEN YOU ARE' : selected.status === 'uploading' ? 'TRANSFER IN PROGRESS' : 'MODEL ANALYSIS IN PROGRESS'}</span><p>{selected.status === 'queued' ? 'Choose Examine to send this recording to the local Swaraksha API.' : 'The backend samples frames and runs its image classifier on eligible crops.'}</p></div>
+                  <div className="awaiting-report"><span>{selected.status === 'queued' ? 'READY WHEN YOU ARE' : selected.status === 'uploading' ? 'TRANSFER IN PROGRESS' : 'MODEL ANALYSIS IN PROGRESS'}</span><p>{selected.status === 'queued' ? 'Choose Examine to send this recording to the local Video Detection Model API.' : 'The backend samples frames and runs its image classifier on eligible crops.'}</p></div>
                 )}
               </>
             ) : (
@@ -285,7 +285,7 @@ function App() {
         <footer className="page-footer">
           <span>FRAME/CHECK <i>·</i> LOCAL FORENSIC WORKSPACE</span>
           <span>MODEL OUTPUT IS A SCREENING SIGNAL, NOT PROOF OF IDENTITY OR FRAUD.</span>
-          <a href="https://github.com/AakashTribhuvan/Swaraksha" target="_blank" rel="noreferrer">SWARAKSHA API <ArrowUpRight size={12} /></a>
+          <a href="https://github.com/AakashTribhuvan/Fusion-SKNCOE-2K26/tree/video-detection-model" target="_blank" rel="noreferrer">VIDEO DETECTION MODEL API <ArrowUpRight size={12} /></a>
         </footer>
       </main>
     </div>
@@ -446,7 +446,7 @@ function AnalysisReport({ result, onSeek }) {
       </section>
 
       {result.metadata_forensics && <MetadataEvidence metadata={result.metadata_forensics} />}
-      <p className="model-caveat">Swaraksha samples video at intervals and applies an image classifier to detected face crops. Relative depth and face-box continuity are review measurements, not liveness verdicts. Short-lived artifacts between samples may be missed; classifier scores are not calibrated probabilities.</p>
+      <p className="model-caveat">Video Detection Model samples video at intervals and applies an image classifier to detected face crops. Relative depth and face-box continuity are review measurements, not liveness verdicts. Short-lived artifacts between samples may be missed; classifier scores are not calibrated probabilities.</p>
     </div>
   );
 }

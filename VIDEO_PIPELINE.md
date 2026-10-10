@@ -1,6 +1,6 @@
-# SWARAKSHA Video Pipeline Architecture
+# Video Detection Model Video Pipeline Architecture
 
-This document describes the layered video analysis pipeline implemented in SWARAKSHA v2.
+This document describes the layered video analysis pipeline implemented in Video Detection Model v2.
 
 ## Pipeline Architecture
 

@@ -1,5 +1,5 @@
 """
-SWARAKSHA Configuration
+Video Detection Model Configuration
 Centralized constants, thresholds, and paths.
 """
 
@@ -13,7 +13,7 @@ EMBEDDINGS_DIR = os.path.join(STORAGE_DIR, "embeddings")
 REPORTS_DIR = os.path.join(STORAGE_DIR, "reports")
 TEMP_DIR = os.path.join(STORAGE_DIR, "temp")
 MODELS_DIR = os.path.join(BASE_DIR, "models")
-DB_PATH = os.path.join(BASE_DIR, "db", "swaraksha.db")
+DB_PATH = os.path.join(BASE_DIR, "db", "video_detection_model.db")
 
 # === Face Detection & Embedding ===
 FACE_MODEL = "ArcFace"              # 512-d embeddings

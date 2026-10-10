@@ -15,13 +15,16 @@ proc = AutoImageProcessor.from_pretrained(model_id)
 m = AutoModelForImageClassification.from_pretrained(model_id)
 m.eval()
 
+import os
+
+eval_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'storage', 'eval_videos')
 videos = [
     ('Veo AI 1', r'C:\Users\LOQ\Downloads\Create_a_video_of_this_person.mp4', 'AI'),
     ('Veo AI 2', r'C:\Users\LOQ\Downloads\Professional_speaking_to_camera_202608272223.mp4', 'AI'),
-    ('StyleGAN AI', r'C:\Users\LOQ\OneDrive\Desktop\FusionHackathon\Swaraksha-publish\storage\eval_videos\ai_stylegan.mp4', 'AI'),
-    ('Real Obama', r'C:\Users\LOQ\OneDrive\Desktop\FusionHackathon\Swaraksha-publish\storage\eval_videos\real_obama.mp4', 'REAL'),
-    ('Real Einstein', r'C:\Users\LOQ\OneDrive\Desktop\FusionHackathon\Swaraksha-publish\storage\eval_videos\real_einstein.mp4', 'REAL'),
-    ('Real Lena', r'C:\Users\LOQ\OneDrive\Desktop\FusionHackathon\Swaraksha-publish\storage\eval_videos\real_lena.mp4', 'REAL'),
+    ('StyleGAN AI', os.path.join(eval_dir, 'ai_stylegan.mp4'), 'AI'),
+    ('Real Obama', os.path.join(eval_dir, 'real_obama.mp4'), 'REAL'),
+    ('Real Einstein', os.path.join(eval_dir, 'real_einstein.mp4'), 'REAL'),
+    ('Real Lena', os.path.join(eval_dir, 'real_lena.mp4'), 'REAL'),
     ('Real WhatsApp', r'C:\Users\LOQ\Downloads\WhatsApp Video 2026-08-25 at 7.47.51 PM.mp4', 'REAL'),
 ]
 

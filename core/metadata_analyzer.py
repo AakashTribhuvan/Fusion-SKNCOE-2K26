@@ -1,5 +1,5 @@
 """
-SWARAKSHA — Metadata Forensics Analyzer
+Video Detection Model — Metadata Forensics Analyzer
 
 Inspects image and video file metadata for common signs of AI generation:
 - EXIF software tags (Stable Diffusion, ComfyUI, DALL-E, Midjourney, etc.)
